@@ -1,0 +1,2716 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>養分快遞島 自然 CH3-4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.min.js" } }</script>
+<style>
+:root {
+  /* 細胞島：全螢幕 3D 島嶼；四角放 HUD；重點卡從右側滑出（手機改為底部抽屜） */
+  --ink: #4e3b2c;
+  --ink-2: #7b6452;
+  --paper: #fffaf0;
+  --paper-2: #f6ecd3;
+  --leaf: #4fae55;
+  --sun: #ffc94a;
+  --line: #e7d7b4;
+  --shadow: #dcc69c;
+  --display: 'Huninn', 'Arial Rounded MT Bold', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --body: 'Huninn', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: var(--body); color: var(--ink); overflow: hidden;
+  background: linear-gradient(180deg, #86d6ee 0%, #c9eef7 46%, #e7f8f4 100%);
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid #2aa6c4; outline-offset: 2px; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
+#labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- 名牌 ---------- */
+.lbl {
+  position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px; padding: 4px 11px 4px 8px; border-radius: 999px;
+  background: rgba(255, 250, 240, .96); border: 2.5px solid var(--zc); font-size: 13.5px; line-height: 1.3;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, .12); transition: padding .2s, font-size .2s;
+}
+.lbl::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--zc); }
+.lbl .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--zc); flex: none; }
+.lbl .st:empty { display: none; }
+.lbl.seen .dot { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--zc); }
+.lbl.done .st::before { content: '★'; color: #f2a516; font-size: 14px; }
+.lbl.done .st { display: inline; }
+.lbl .go { display: none; font-size: 11.5px; background: var(--zc); color: #fff; padding: 1px 8px; border-radius: 999px; margin-left: 2px; }
+.lbl.near { font-size: 15px; padding: 6px 12px 6px 9px; animation: hop 1.1s ease-in-out infinite; }
+.lbl.near .go { display: inline-block; }
+.lbl.npc { border-style: dashed; background: #fff; }
+.lbl.npc .bub { font-weight: 700; color: var(--zc); letter-spacing: 1px; }
+.lbl.tiny { padding: 0; width: 14px; height: 14px; gap: 0; border-width: 2px; background: var(--zc); }
+.lbl.tiny > * { display: none !important; }
+.lbl.tiny::after { display: none; }
+.zlbl {
+  position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; display: flex; flex-direction: column; align-items: center;
+  background: var(--zc); color: #fff; border: 3px solid #fff; border-radius: 18px; padding: 6px 16px 7px; font-size: 21px; white-space: nowrap;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, .14);
+}
+.zlbl b { font-size: 13px; opacity: .9; }
+.zlbl small { font-size: 12px; opacity: .92; }
+@keyframes hop { 0%, 100% { margin-top: 0; } 50% { margin-top: -5px; } }
+
+/* ---------- HUD ---------- */
+.brand {
+  position: fixed; left: 14px; top: 14px; z-index: 20; background: var(--paper); border-radius: 22px; padding: 10px 16px 12px;
+  box-shadow: 0 5px 0 var(--shadow), 0 10px 24px rgba(70, 50, 20, .14); min-width: 220px;
+}
+.brand h1 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 30px; line-height: 1.1; letter-spacing: 2px; color: #3c8d47; text-shadow: 2px 2px 0 #fff, 3px 3px 0 #cfe8b8; }
+.brand .sub { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+.prog { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.bar { flex: 1; height: 9px; background: #efe3c6; border-radius: 9px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #7fd06c, #3fae55); border-radius: 9px; transition: width .5s; }
+#badgeRow { display: flex; gap: 4px; margin-top: 7px; }
+.mini-badge { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; background: #efe8d6; filter: grayscale(1); opacity: .5; }
+.mini-badge.on { background: var(--zc); filter: none; opacity: 1; box-shadow: 0 2px 0 rgba(0, 0, 0, .15); }
+.hud { position: fixed; right: 14px; top: 14px; z-index: 20; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: calc(100vw - 280px); }
+.btn {
+  border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 9px 15px; border-radius: 999px;
+  background: var(--paper); box-shadow: 0 4px 0 var(--shadow), 0 6px 14px rgba(70, 50, 20, .12); font-size: 15px; transition: transform .08s, box-shadow .08s;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--shadow); }
+.btn svg { width: 19px; height: 19px; flex: none; }
+.btn.big { font-size: 16.5px; padding: 12px 20px; background: var(--leaf); color: #fff; box-shadow: 0 5px 0 #34853b, 0 8px 16px rgba(40, 90, 40, .2); }
+.btn.big:disabled { background: #d8d0bd; color: #7d705f; box-shadow: 0 4px 0 #bfb59f; cursor: not-allowed; }
+.btn.ghost { background: #f1e6cb; box-shadow: 0 4px 0 #d5c39a; }
+.atp { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; background: #fff3bf; box-shadow: 0 4px 0 #e6cf7c; font-size: 15px; font-variant-numeric: tabular-nums; }
+.atp b { font-size: 19px; }
+.atp svg { width: 22px; height: 22px; }
+.atp.bump { animation: bump .5s; }
+@keyframes bump { 30% { transform: scale(1.18); } }
+.hint {
+  position: fixed; left: 14px; bottom: 14px; z-index: 15; background: rgba(255, 250, 240, .94); padding: 9px 12px 9px 14px; border-radius: 16px;
+  font-size: 13px; color: var(--ink-2); box-shadow: 0 3px 0 var(--shadow); display: flex; gap: 10px; align-items: center; transition: opacity .4s; max-width: calc(100vw - 28px);
+}
+.hint .short { display: none; }
+.hint b { color: var(--ink); font-weight: 400; background: #f3e7c9; padding: 0 6px; border-radius: 6px; }
+.hint.fade { opacity: 0; pointer-events: none; }
+.hint button { border: 0; background: #efe3c6; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; flex: none; }
+#zoneBanner {
+  position: fixed; left: 50%; top: 16px; z-index: 18; transform: translate(-50%, -140%); display: flex; align-items: baseline; gap: 10px;
+  background: var(--zc, #4fae55); color: #fff; padding: 9px 22px 10px; border-radius: 20px; border: 3px solid #fff; box-shadow: 0 6px 0 rgba(0, 0, 0, .12); pointer-events: none; white-space: nowrap;
+}
+#zoneBanner b { font-size: 14px; opacity: .9; } #zoneBanner span { font-size: 22px; } #zoneBanner small { font-size: 13px; opacity: .9; }
+#zoneBanner.show { animation: banner 2.8s ease forwards; }
+@keyframes banner { 0% { transform: translate(-50%, -140%); } 12%, 82% { transform: translate(-50%, 0); } 100% { transform: translate(-50%, -140%); } }
+body.card-open #zoneBanner { left: calc(50% - 210px); }
+#toasts { position: fixed; left: 50%; top: 78px; transform: translateX(-50%); z-index: 40; display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; }
+.toast { white-space: nowrap; background: var(--paper); padding: 7px 14px; border-radius: 999px; box-shadow: 0 4px 0 var(--shadow); font-size: 14px; animation: tin .3s ease; transition: opacity .4s, transform .4s; }
+.toast.atp b { color: #c98a12; } .toast.stamp b { color: #3c8d47; }
+.toast.out { opacity: 0; transform: translateY(-8px); }
+@keyframes tin { from { opacity: 0; transform: translateY(-10px) scale(.9); } }
+
+/* ---------- 重點卡 ---------- */
+#panel {
+  position: fixed; right: 14px; top: 76px; bottom: 14px; width: min(430px, calc(100vw - 28px)); z-index: 25; overflow: auto; overscroll-behavior: contain;
+  background: var(--paper); border-radius: 30px; padding: 22px 22px 28px; box-shadow: 0 6px 0 var(--shadow), 0 18px 40px rgba(60, 40, 15, .22);
+  transform: translateX(calc(100% + 30px)); transition: transform .32s cubic-bezier(.2, .9, .3, 1.15);
+  background-image: radial-gradient(#f1e5c7 1.2px, transparent 1.3px); background-size: 18px 18px;
+}
+#panel.open { transform: none; }
+#panel .x, .modal .x { position: absolute; right: 14px; top: 14px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: #f1e6cb; font-size: 22px; cursor: pointer; box-shadow: 0 3px 0 #d5c39a; }
+.chip { display: inline-flex; gap: 8px; align-items: baseline; background: var(--zc); color: #fff; border-radius: 999px; padding: 4px 12px; font-size: 13.5px; }
+.chip span { opacity: .9; font-size: 12px; }
+#panel h2 { font-family: var(--display); font-weight: 400; font-size: 28px; margin: 10px 40px 6px 0; line-height: 1.25; text-wrap: balance; }
+.place { margin: 0 0 14px; background: #fff; border: 2px dashed var(--line); border-radius: 16px; padding: 10px 13px; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px; }
+.flow span { background: #e9f6ff; border: 2px solid #b7dcf2; border-radius: 12px; padding: 4px 10px; font-size: 13.5px; line-height: 1.4; }
+.flow i { font-style: normal; color: #5aa6cf; font-size: 15px; }
+.pts { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 9px; }
+.pts li { position: relative; padding: 9px 12px 9px 34px; background: #fff; border-radius: 14px; font-size: 15px; line-height: 1.7; box-shadow: 0 2px 0 #efe3c6; }
+.pts li::before { content: ''; position: absolute; left: 12px; top: 15px; width: 12px; height: 12px; border-radius: 50%; background: #fde3ec; border: 2px solid #e88aa5; box-shadow: inset 3px -2px 0 -1px #9b7ad8; }
+.pts b, .place b, .tip b, .qq b { color: #2d6f9c; font-weight: 400; background: linear-gradient(transparent 62%, #fff0a8 62%); }
+sub, sup { font-size: 70%; }
+.tip { background: #fff5d1; border-radius: 16px; padding: 10px 14px 12px; margin: 0 0 16px; border: 2px solid #f4dc8a; }
+.tip > b { display: inline-block; background: #f2b84b; color: #fff; padding: 1px 10px; border-radius: 999px; font-size: 12.5px; }
+.tip p { margin: 6px 0 0; font-size: 14.5px; line-height: 1.65; }
+.quiz { display: grid; gap: 12px; margin-bottom: 16px; }
+.qblk { background: #eef8ea; border: 2.5px solid #bfe3b0; border-radius: 20px; padding: 12px 14px 14px; }
+.qblk.solved { background: #f3fbef; }
+.qh { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #3c8d47; }
+.reward { background: #fff3bf; color: #9a6d0c; border-radius: 999px; padding: 1px 9px; }
+.okchip { background: #3fae55; color: #fff; border-radius: 999px; padding: 1px 10px; }
+.qq { margin: 6px 0 10px; font-size: 15.5px; line-height: 1.6; }
+.opts { display: grid; gap: 7px; }
+.opt { text-align: left; display: flex; gap: 10px; align-items: flex-start; border: 0; cursor: pointer; background: #fff; border-radius: 14px; padding: 9px 12px; box-shadow: 0 3px 0 #d5e9cb; font-size: 14.5px; line-height: 1.5; transition: transform .08s; }
+.opt b { flex: none; width: 24px; height: 24px; border-radius: 50%; background: #e3f2db; display: grid; place-items: center; font-weight: 400; font-size: 13px; }
+.opt:hover:not(:disabled) { transform: translateY(-1px); }
+.opt:disabled { cursor: default; }
+.opt.right { background: #3fae55; color: #fff; box-shadow: 0 3px 0 #2d7f3d; } .opt.right b { background: #fff; color: #3fae55; }
+.opt.wrong { background: #ffe1df; color: #a8463c; box-shadow: 0 3px 0 #f0b9b3; animation: shake .35s; }
+.opt.hint { outline: 3px dashed #3fae55; }
+@keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+.fb p { margin: 10px 0 0; font-size: 14.5px; line-height: 1.65; } .fb b { color: #2f7d3a; margin-right: 4px; }
+.game { width: 100%; justify-content: center; margin-bottom: 16px; }
+.rel { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.rel button { border: 2px solid var(--zc); background: #fff; border-radius: 999px; padding: 4px 11px; cursor: pointer; font-size: 13.5px; }
+
+/* ---------- 對話框 ---------- */
+#dialog {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(660px, calc(100vw - 24px)); z-index: 30; cursor: pointer;
+  background: var(--paper); border-radius: 40px 40px 44px 44px / 36px 36px 46px 46px; padding: 30px 32px 22px; box-shadow: 0 6px 0 var(--shadow), 0 18px 40px rgba(60, 40, 15, .25);
+  animation: dlgIn .28s cubic-bezier(.2, .9, .3, 1.2);
+}
+@keyframes dlgIn { from { transform: translate(-50%, 30px) scale(.94); opacity: 0; } }
+#dlgName { position: absolute; left: 30px; top: -18px; background: var(--nc); color: #fff; padding: 5px 18px; border-radius: 999px; transform: rotate(-3deg); font-size: 17px; box-shadow: 0 3px 0 rgba(0, 0, 0, .15); text-shadow: 0 1px 0 rgba(0, 0, 0, .2); }
+#dlgName small { font-size: 12px; margin-left: 8px; opacity: .9; }
+#dlgText { font-size: 18px; line-height: 1.75; min-height: 3.5em; margin: 0; }
+#dlgActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+#dlgActions:empty { display: none; }
+.dlg-next { position: absolute; right: 30px; bottom: 12px; color: #f2a541; animation: hop .9s infinite; font-size: 14px; }
+#dialog.last .dlg-next { display: none; }
+
+/* ---------- 視窗 ---------- */
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(36, 70, 80, .38); display: grid; place-items: center; padding: 12px; }
+.modal .sheet { position: relative; width: min(620px, 100%); max-height: 100%; overflow: auto; background: var(--paper); border-radius: 30px; padding: 26px 26px 28px; box-shadow: 0 8px 0 var(--shadow), 0 24px 60px rgba(30, 30, 20, .3); animation: dlgIn2 .26s cubic-bezier(.2, .9, .3, 1.15); overscroll-behavior: contain; }
+@keyframes dlgIn2 { from { transform: translateY(24px) scale(.96); opacity: 0; } }
+.modal.wide .sheet { width: min(900px, 100%); }
+.mt { font-family: var(--display); font-weight: 400; font-size: 27px; margin: 0 44px 4px 0; }
+.mt small { font-size: 15px; color: var(--ink-2); margin-left: 6px; }
+.sub { margin: 0 0 16px; color: var(--ink-2); font-size: 14.5px; line-height: 1.6; } .sub.center { text-align: center; margin-top: 14px; }
+.mapwrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.map { position: relative; border-radius: 22px; overflow: hidden; box-shadow: 0 4px 0 var(--shadow); aspect-ratio: 320 / 300; }
+.map img { width: 100%; height: 100%; display: block; image-rendering: auto; }
+.mdot { position: absolute; width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px; border-radius: 50%; border: 2.5px solid #fff; background: var(--zc); cursor: pointer; padding: 0; box-shadow: 0 2px 0 rgba(0, 0, 0, .2); }
+.mdot.done::after { content: '★'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -55%); font-size: 10px; color: #fff; }
+.mdot:hover { transform: scale(1.35); }
+.me { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; background: #fff; border: 4px solid #e2463b; animation: hop 1s infinite; pointer-events: none; }
+.mzl { position: absolute; transform: translate(-50%, -160%); background: var(--zc); color: #fff; font-size: 12px; padding: 1px 8px; border-radius: 999px; pointer-events: none; border: 2px solid #fff; }
+.mzs { display: grid; gap: 10px; max-height: 70vh; overflow: auto; padding-right: 4px; }
+.mz h3, .pz h3 { margin: 0 0 6px; font-size: 16px; font-weight: 400; display: flex; gap: 8px; align-items: baseline; }
+.mz h3 b, .pz h3 b { background: var(--zc); color: #fff; font-weight: 400; font-size: 12px; padding: 1px 8px; border-radius: 999px; }
+.mz h3 small { color: var(--ink-2); font-size: 12px; }
+.mz-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.mz-list button { border: 2px solid var(--zc); background: #fff; border-radius: 999px; padding: 3px 10px; font-size: 13px; cursor: pointer; }
+.mz-list button.seen { background: #fbf6ea; } .mz-list button.done { background: var(--zc); color: #fff; }
+.mz-list button.done::before { content: '★ '; }
+#q { width: 100%; font: inherit; font-size: 18px; padding: 12px 16px; border-radius: 16px; border: 3px solid var(--line); background: #fff; color: var(--ink); }
+.sugg { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 6px; }
+.sugg button { border: 0; background: #f1e6cb; border-radius: 999px; padding: 4px 11px; cursor: pointer; font-size: 13.5px; }
+.results { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 7px; }
+.results button { width: 100%; text-align: left; border: 0; background: #fff; border-left: 6px solid var(--zc); border-radius: 14px; padding: 10px 14px; cursor: pointer; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; box-shadow: 0 2px 0 #efe3c6; }
+.results .rz { grid-row: span 2; align-self: center; background: var(--zc); color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 12px; }
+.results b { font-weight: 400; font-size: 16px; } .results small { color: var(--ink-2); font-size: 13px; }
+.results .none { color: var(--ink-2); padding: 8px 2px; }
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 0 0 16px; }
+.badge { text-align: center; background: #f2ecdc; border-radius: 18px; padding: 10px 4px 8px; opacity: .55; filter: grayscale(1); }
+.badge span { display: grid; place-items: center; width: 46px; height: 46px; margin: 0 auto 4px; border-radius: 50%; background: #e4dcc8; font-size: 22px; }
+.badge b { display: block; font-weight: 400; font-size: 13px; } .badge small { font-size: 11px; color: var(--ink-2); }
+.badge.on { opacity: 1; filter: none; background: #fff; box-shadow: 0 3px 0 var(--shadow); } .badge.on span { background: var(--zc); box-shadow: 0 0 0 4px #fff, 0 0 0 6px var(--zc); }
+.games { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 14px; font-size: 13px; color: var(--ink-2); }
+.games button { border: 2px solid #2f9e7c; background: #fff; border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 13.5px; }
+.games button.done { background: #2f9e7c; color: #fff; }
+.pz { margin-bottom: 12px; } .pz h3 span { margin-left: auto; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.stamps { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.stamp { display: flex; gap: 6px; align-items: center; text-align: left; border: 2px dashed #d9cba8; background: #fffdf7; border-radius: 12px; padding: 6px 9px; font-size: 13px; cursor: pointer; color: var(--ink-2); }
+.stamp i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; flex: none; background: #efe7d2; }
+.stamp.seen { border-style: solid; color: var(--ink); } .stamp.done { border: 2px solid var(--zc); color: var(--ink); } .stamp.done i { background: var(--zc); color: #fff; }
+.prow { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 18px; }
+.linkbtn { border: 0; background: none; color: #a8463c; text-decoration: underline; cursor: pointer; font-size: 13.5px; }
+.linkbtn.armed { background: #ffe1df; border-radius: 999px; padding: 4px 10px; text-decoration: none; }
+.cert { background: #fffdf6; border: 4px double #e2bf6a; border-radius: 26px; padding: 24px 22px 18px; text-align: center; background-image: radial-gradient(circle at 15% 12%, #fff1c8 0 60px, transparent 61px), radial-gradient(circle at 88% 90%, #e6f6dc 0 70px, transparent 71px); }
+.cert-k { display: inline-block; background: #3fae55; color: #fff; border-radius: 999px; padding: 2px 14px; font-size: 14px; }
+.cert h2 { font-family: var(--display); font-weight: 400; font-size: 36px; margin: 6px 0 12px; letter-spacing: 4px; color: #3c8d47; }
+#certName { font: inherit; font-size: 26px; text-align: center; width: min(360px, 100%); border: 0; border-bottom: 3px dashed #d9b864; background: transparent; padding: 4px; color: var(--ink); }
+.cert p { line-height: 1.7; font-size: 15px; }
+.cert .badges { margin: 12px 0; }
+.cert-foot { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-2); border-top: 2px dashed #eadcb4; padding-top: 10px; font-variant-numeric: tabular-nums; }
+.ocards { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.ocard { position: relative; border: 0; cursor: pointer; background: #fff; border-radius: 16px; padding: 16px 10px 14px; font-size: 17px; box-shadow: 0 4px 0 var(--shadow); }
+.ocard .num:empty { display: none; }
+.ocard .num { position: absolute; top: -10px; left: -6px; width: 28px; height: 28px; border-radius: 50%; background: #f2a541; color: #fff; display: grid; place-items: center; font-size: 15px; box-shadow: 0 2px 0 #c97f22; }
+.ocard.on { outline: 3px solid #f2a541; } .ocard.right { outline: 3px solid #3fae55; } .ocard.right .num { background: #3fae55; } .ocard.wrong { outline: 3px solid #e2574c; } .ocard.wrong .num { background: #e2574c; }
+.otrack { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 30px; }
+.otrack li { background: #eef8ea; border-radius: 999px; padding: 3px 10px; font-size: 14px; }
+.otrack li + li::before { content: '→ '; color: #7b6452; }
+.mgrid { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); gap: 14px; }
+.mcol { display: grid; gap: 8px; align-content: start; }
+.mitem { border: 0; cursor: pointer; background: #fff; border-radius: 14px; padding: 12px 14px; font-size: 15.5px; text-align: left; box-shadow: 0 3px 0 var(--shadow); line-height: 1.5; }
+.mitem.on { outline: 3px solid #f2a541; } .mitem.right { background: #3fae55; color: #fff; box-shadow: 0 3px 0 #2d7f3d; } .mitem.wrong { background: #ffe1df; animation: shake .35s; }
+.mcards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.mcard { position: relative; border: 0; background: #fff; border-radius: 18px; padding: 8px 6px 10px; cursor: pointer; box-shadow: 0 4px 0 var(--shadow); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.mcard svg { width: 100%; max-width: 130px; aspect-ratio: 1; }
+.mcard .lab { font-size: 14px; color: var(--ink-2); }
+.mcard .num:empty { display: none; }
+.mcard .num { position: absolute; top: 6px; left: 6px; width: 30px; height: 30px; border-radius: 50%; background: #f2a541; color: #fff; display: grid; place-items: center; font-size: 17px; box-shadow: 0 2px 0 #c97f22; }
+.mcard.on { outline: 3px solid #f2a541; }
+.mcard.right { outline: 3px solid #3fae55; } .mcard.right .num { background: #3fae55; box-shadow: none; }
+.mcard.wrong { outline: 3px solid #e2574c; } .mcard.wrong .num { background: #e2574c; box-shadow: none; }
+.mcard .nm { font-size: 12px; line-height: 1.4; color: #2f7d3a; text-align: center; min-height: 0; }
+.gact { display: flex; gap: 10px; margin-top: 14px; }
+.gfb p { margin: 12px 0 0; line-height: 1.7; font-size: 15px; } .gfb b { color: #2f7d3a; }
+.mm { width: 100%; height: auto; display: block; border-radius: 16px; box-shadow: 0 3px 0 var(--shadow); margin-bottom: 14px; }
+.mmq { background: #eef8ea; border: 2.5px solid #bfe3b0; border-radius: 18px; padding: 12px 14px; margin-bottom: 10px; }
+.mmq label { display: block; font-size: 15.5px; line-height: 1.6; margin-bottom: 8px; }
+.inrow { display: flex; gap: 8px; align-items: center; }
+.inrow input { font: inherit; font-size: 18px; width: 120px; padding: 7px 12px; border-radius: 12px; border: 3px solid #cfe5c3; background: #fff; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ---------- 開場 ---------- */
+#intro { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; transition: opacity .5s; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, .25) 100%); }
+#intro.gone { opacity: 0; pointer-events: none; }
+.intro-card { width: min(540px, 100%); background: rgba(255, 250, 240, .95); border-radius: 36px; padding: 30px 30px 26px; box-shadow: 0 8px 0 var(--shadow), 0 30px 70px rgba(30, 60, 70, .25); animation: dlgIn2 .5s cubic-bezier(.2, .9, .3, 1.15); }
+.intro-card .kick { display: inline-block; background: #fff3bf; border-radius: 999px; padding: 3px 12px; font-size: 13.5px; color: #8a6510; }
+.logo { font-family: var(--display); font-size: clamp(46px, 11vw, 80px); line-height: 1; margin: 12px 0 6px; letter-spacing: 6px; color: #49a64f; text-shadow: 3px 3px 0 #fff, 6px 6px 0 #bfe3a4, 9px 9px 0 rgba(60, 120, 60, .18); }
+.logo span { color: #e8644f; text-shadow: 3px 3px 0 #fff, 6px 6px 0 #f6c9b8, 9px 9px 0 rgba(150, 70, 50, .18); }
+.intro-card h2 { font-family: var(--display); font-weight: 400; font-size: 20px; margin: 0 0 10px; }
+.intro-card p { margin: 0 0 16px; line-height: 1.7; font-size: 15.5px; color: var(--ink-2); }
+.zchips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; margin-bottom: 20px; }
+.zchips span { background: #fff; border-left: 6px solid var(--zc); border-radius: 12px; padding: 6px 10px; font-size: 14px; box-shadow: 0 2px 0 #efe3c6; }
+.zchips small { display: block; color: var(--ink-2); font-size: 12px; }
+.intro-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+#loading { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: #bfe9f4; font-size: 20px; color: #2f6f80; transition: opacity .6s; }
+#loading.gone { opacity: 0; pointer-events: none; }
+body[data-mode="intro"] .brand, body[data-mode="intro"] .hud, body[data-mode="intro"] .hint { opacity: 0; pointer-events: none; }
+.brand, .hud, .hint { transition: opacity .5s; }
+
+@media (max-width: 760px) {
+  .brand { min-width: 0; padding: 8px 12px 10px; border-radius: 18px; }
+  .brand h1 { font-size: 23px; } .brand .sub { font-size: 11px; }
+  .hud { max-width: none; top: auto; bottom: 12px; right: 50%; transform: translateX(50%); flex-wrap: nowrap; gap: 6px; }
+  .hud .btn { padding: 9px 11px; } .hud .btn .t { display: none; }
+  .atp { padding: 7px 11px; box-shadow: 0 4px 0 #e6cf7c; } .atp b { font-size: 17px; } .atp .u { display: none; }
+  .hint { bottom: 72px; font-size: 12.5px; } .hint .long { display: none; } .hint .short { display: inline; }
+  #toasts { top: 150px; }
+  .modal { padding: 8px 8px 72px; }
+  #panel { left: 8px; right: 8px; width: auto; top: auto; bottom: 8px; max-height: 66%; transform: translateY(calc(100% + 20px)); border-radius: 26px; padding: 18px 16px 24px; }
+  #panel h2 { font-size: 24px; }
+  body.card-open #zoneBanner { left: 50%; }
+  body.card-open .hud { opacity: 0; pointer-events: none; }
+  #dialog { bottom: 74px; padding: 26px 22px 18px; } #dlgText { font-size: 16.5px; }
+  .mapwrap { grid-template-columns: 1fr; }
+  .mzs { max-height: none; }
+  .badges { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; } .badge b { font-size: 11px; } .badge small { display: none; } .badge span { width: 36px; height: 36px; font-size: 18px; }
+  .mcards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #zoneBanner span { font-size: 18px; } #zoneBanner small { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body data-mode="intro">
+<div id="stage" role="application" aria-label="3D 養分快遞島，可用滑鼠、觸控或鍵盤探索"></div>
+<div id="labels"></div>
+
+<header class="brand">
+  <h1>養分快遞島</h1>
+  <div class="sub">國中自然 1上・第 3 章 生物體的營養／第 4 章 生物體的運輸作用</div>
+  <div class="prog"><span>完成</span><div class="bar"><i id="progBar"></i></div><span id="progN">0 / 38</span></div>
+  <div id="badgeRow" aria-label="徽章"></div>
+</header>
+
+<nav class="hud" aria-label="工具列">
+  <span class="atp" id="atp" title="答對題目可以賺 ATP"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="17" height="12" rx="3" fill="#ffd84d" stroke="#c98a12" stroke-width="2"/><rect x="19.5" y="9.5" width="2.5" height="5" rx="1" fill="#c98a12"/><path d="M11.5 8 L8 12.6 H11 L9.8 16 L13.6 11.2 H10.7 Z" fill="#c98a12"/></svg><b id="atpN">0</b><span class="u">ATP</span></span>
+  <button type="button" class="btn" id="btnMap" aria-label="島嶼地圖"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#3c8d47" stroke-width="2.2" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span class="t">地圖</span></button>
+  <button type="button" class="btn" id="btnSearch" aria-label="搜尋"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#2a8db0" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><span class="t">搜尋</span></button>
+  <button type="button" class="btn" id="btnPass" aria-label="護照與徽章"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#c96a4a" stroke-width="2.2" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="11" r="3.2"/><path d="M9 17h6"/></svg><span class="t">護照</span></button>
+  <button type="button" class="btn" id="btnView" aria-label="切換俯瞰"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#8a68cf" stroke-width="2.2"><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span class="t">俯瞰全島</span></button>
+  <button type="button" class="btn" id="btnSound" aria-pressed="true" aria-label="音效開關"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#e59a2f" stroke-width="2.2" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9a4 4 0 010 6M19 6.5a7.5 7.5 0 010 11" stroke-linecap="round"/></svg><span class="t">音效 開</span></button>
+</nav>
+
+<div id="zoneBanner" aria-live="polite"></div>
+<div class="hint" id="hint"><span class="long">點地面走路・拖曳轉視角・滾輪縮放・<b>WASD</b> 移動・<b>E</b> 查看・<b>M</b> 地圖</span><span class="short">點地面走路・點名牌看重點・兩指縮放</span><button type="button" id="hintClose" aria-label="關閉提示">×</button></div>
+<div id="toasts" aria-live="polite"></div>
+
+<aside id="panel" hidden aria-label="地點重點"></aside>
+
+<div id="dialog" hidden role="dialog" aria-live="polite"><div id="dlgName"></div><p id="dlgText"></p><div id="dlgActions"></div><span class="dlg-next" aria-hidden="true">▼</span></div>
+
+<div id="modal" class="modal" hidden><div class="sheet" role="dialog" aria-modal="true"><button type="button" class="x" id="modalClose" aria-label="關閉">×</button><div id="modalBody"></div></div></div>
+
+<div id="intro">
+  <div class="intro-card">
+    <span class="kick">國中自然 1上・第 3、4 章</span>
+    <div class="logo">養分快遞<span>島</span></div>
+    <h2>生物體的營養 × 生物體的運輸作用</h2>
+    <p>從營養市場買食材，沿著粉紅色的消化大道一路消化，再搭上紅藍兩色的血管路環島。每棟建築都有重點和小測驗，七個區域全破就能領榮譽島民證。</p>
+    <div class="zchips">
+      <span style="--zc:#e59a2f">3-1 營養市場<small>食物中的養分與能量</small></span>
+      <span style="--zc:#8a68cf">3-2 酵素工坊<small>酵素</small></span>
+      <span style="--zc:#5aa83c">3-3 光合田園<small>植物如何製造養分</small></span>
+      <span style="--zc:#e07aa0">3-4 消化大道<small>人體如何獲得養分</small></span>
+      <span style="--zc:#2f9e7c">4-1・4-2 維管束森林<small>植物的運輸</small></span>
+      <span style="--zc:#d9485a">4-3 心臟城<small>心血管系統的組成</small></span>
+      <span style="--zc:#3f87d6">4-4 循環防線<small>人體的循環系統</small></span>
+    </div>
+    <div class="intro-actions">
+      <button type="button" class="btn big" id="btnStart">上島探索</button>
+      <button type="button" class="btn ghost" id="btnStartMap">先看全島地圖</button>
+    </div>
+  </div>
+</div>
+<div id="loading">養分快遞島建造中…</div>
+
+<script type="module">
+import * as THREE from 'three';
+// ================= 內容資料：國中自然 1上 第 3 章 生物體的營養、第 4 章 生物體的運輸作用 =================
+const ZONES = [
+  { id: 'z31', code: '3-1', name: '營養市場', sub: '食物中的養分與能量', color: '#e59a2f', center: [-42, 1] },
+  { id: 'z32', code: '3-2', name: '酵素工坊', sub: '酵素', color: '#8a68cf', center: [-44, 22] },
+  { id: 'z33', code: '3-3', name: '光合田園', sub: '植物如何製造養分', color: '#5aa83c', center: [-38, -28] },
+  { id: 'z34', code: '3-4', name: '消化大道', sub: '人體如何獲得養分', color: '#e07aa0', center: [3, 6] },
+  { id: 'z41', code: '4-1・4-2', name: '維管束森林', sub: '植物的運輸', color: '#2f9e7c', center: [14, -36] },
+  { id: 'z43', code: '4-3', name: '心臟城', sub: '心血管系統的組成', color: '#d9485a', center: [40, -4] },
+  { id: 'z44', code: '4-4', name: '循環防線', sub: '人體的循環系統', color: '#3f87d6', center: [40, 28] },
+];
+const TC = [4, 2];
+const ISLAND = {
+  name: '養分快遞島', key: 'nutrient-island-ch34-v1',
+  rx: 68, rz: 61, coast: [[0.04, 3, 1.6], [0.03, 5, 5.6], [0.02, 7, 2.0]],
+  course: '國中自然 1上第 3 章「生物體的營養」與第 4 章「生物體的運輸作用」',
+};
+const BADGE = { z31: '營養小達人', z32: '酵素專家', z33: '光合農夫', z34: '消化旅人', z41: '維管束巡山員', z43: '心臟城民', z44: '防線守衛' };
+const BADGE_ICON = { z31: '🍙', z32: '🧪', z33: '🌱', z34: '🍽️', z41: '🌳', z43: '❤️', z44: '🛡️' };
+
+const POIS = [
+  // ---------------- 3-1 營養市場 ----------------
+  { id: 'energy-stall', zone: 'z31', name: '能量養分攤', kind: 'stalls', p: [-48, -2], face: [-41, -1], r: 3.4,
+    stalls: [['醣類', '#f39cb6', 'sugar'], ['蛋白質', '#f2a24a', 'protein'], ['脂質', '#f2cf4a', 'lipid']],
+    place: '這三攤賣的養分都能產生能量，也是組成身體的材料。',
+    pts: ['養分分兩大類：<b>可產生能量</b>的醣類（碳水化合物）、蛋白質、脂質；<b>不能產生能量</b>的水、礦物質、維生素。',
+      '<b>醣類</b>：植物細胞壁的纖維素、儲存能量的澱粉和肝糖，都屬於醣類。',
+      '<b>蛋白質</b>：動物的毛髮、肌肉中含有蛋白質。',
+      '<b>脂質</b>：常分布在動物的皮膚下層，可以防止熱量散失，有保溫效果。'],
+    tip: '醣類、蛋白質、脂質除了提供能量，也是組成生物體的原料。',
+    quiz: [{ q: '下列哪一種養分<b>無法</b>產生能量？', o: ['醣類', '蛋白質', '脂質', '維生素'], a: 3,
+      ex: '水、礦物質、維生素不能產生能量，但對維持生理運作很重要。' }],
+    rel: ['regulate-stall', 'food-test'], kw: '六大營養素 醣類 碳水化合物 蛋白質 脂質 能量 纖維素 澱粉 肝糖 保溫' },
+
+  { id: 'regulate-stall', zone: 'z31', name: '調節養分攤', kind: 'stalls', p: [-34, -5], face: [-34, 0], r: 3.4,
+    stalls: [['水', '#5bb5e8', 'water'], ['礦物質', '#9aa4ad', 'mineral'], ['維生素', '#6cbf5a', 'vitamin']],
+    place: '這三攤的東西不能產生能量，卻能讓身體正常運作。',
+    pts: ['<b>水</b>：生物體內含量<b>最多</b>的物質；細胞內大部分物質要先溶在水中才能進行反應。',
+      '<b>礦物質</b>：構成細胞組織、調節生理機能。<b>鈣和磷</b>是骨頭和牙齒的重要成分，<b>鐵</b>是人體造血的重要成分。',
+      '<b>維生素</b>（維他命）：調節生理機能。缺乏<b>維生素 A</b> 可能造成夜間視力減退（夜盲症）；缺乏<b>維生素 C</b> 容易皮下或牙齦出血。',
+      '平常飲食要均衡攝取<b>六大營養素</b>。'],
+    quiz: [{ q: '晚上看東西越來越不清楚（夜盲症），可能缺乏哪一種營養素？', o: ['維生素 A', '維生素 C', '鈣', '鐵'], a: 0,
+      ex: '缺乏維生素 A 可能造成夜盲症；缺乏維生素 C 容易皮下或牙齦出血。' },
+    { q: '骨頭和牙齒的重要成分是哪兩種礦物質？', o: ['鈣和磷', '鐵和鈣', '鈉和鉀', '碘和鐵'], a: 0,
+      ex: '鈣和磷構成骨頭和牙齒；鐵是造血的重要成分。' }],
+    rel: ['energy-stall'], kw: '水 礦物質 維生素 維他命 鈣 磷 鐵 夜盲症 牙齦出血 六大營養素' },
+
+  { id: 'food-test', zone: 'z31', name: '澱粉與糖分測定站', kind: 'testLab', p: [-42, 8], face: [-36, 8], r: 3.4,
+    place: '實驗 3-1：一瓶碘液、一瓶本氏液，就能知道食物裡有沒有澱粉和糖。',
+    pts: ['<b>碘液</b>（黃褐色）測澱粉：有澱粉會立刻變成<b>藍黑色或紫紅色</b>；沒有澱粉則維持黃褐色。',
+      '<b>本氏液</b>（淡藍色）測葡萄糖：和待測物混合後要<b>隔水加熱</b>，依葡萄糖多寡變成綠、黃、橙或紅色。',
+      '葡萄糖測定中，加葡萄糖液的甲試管是<b>實驗組</b>，加水的乙試管是<b>對照組</b>。',
+      '白飯滴碘液會變色 → 含澱粉；水果汁加本氏液隔水加熱會變色 → 含糖分。',
+      '酒精燈要先點燃再移到陶瓷纖維網下方；用完先移出，再用燈罩熄滅。'],
+    quiz: [{ q: '想知道蘋果汁裡有沒有葡萄糖，應該怎麼做？', o: ['加碘液，不必加熱', '加本氏液，隔水加熱', '加本氏液，直接用火燒試管', '加酒精，隔水加熱'], a: 1,
+      ex: '本氏液檢測葡萄糖，要隔水加熱才會變色；碘液是用來檢測澱粉的。' }],
+    rel: ['energy-stall', 'saliva-lab', 'light-exp'], kw: '實驗3-1 碘液 本氏液 澱粉 葡萄糖 隔水加熱 實驗組 對照組 藍黑色' },
+
+  { id: 'membrane-isle', zone: 'z31', name: '擴散與滲透小島', kind: 'funnel', p: [-61, 53], face: [-50, 44], r: 3.2,
+    place: '沙洲盡頭的漏斗實驗：小分子溜得出去，大分子只能留在裡面。',
+    pts: ['甜粿紙、蛋膜是一種<b>半透膜</b>：只讓小分子物質和水分子通過。',
+      '通過膜的速度：<b>水分子最快</b>，小分子（例如葡萄糖）次之，大分子（例如澱粉）無法通過。',
+      '漏斗裝葡萄糖液：取漏斗外的水加本氏液隔水加熱會變色 → 葡萄糖可以擴散通過。',
+      '漏斗裝澱粉液：漏斗外的水滴碘液不變色 → 澱粉無法通過。',
+      '想一想：漏斗液面為什麼會上升？因為水分子由漏斗外進入漏斗內。',
+      '消化的意義也在這裡：大分子要分解成小分子，才能通過細胞膜進入細胞。'],
+    quiz: [{ q: '半透膜漏斗內裝澱粉液，30 分鐘後在漏斗<b>外</b>的水滴碘液，結果會如何？', o: ['變藍黑色，因為澱粉擴散出來', '維持黃褐色，因為澱粉無法通過半透膜', '變成紅色', '變成淡藍色'], a: 1,
+      ex: '澱粉是大分子，無法通過半透膜，所以漏斗外沒有澱粉。' }],
+    rel: ['food-test', 'small-intestine'], kw: '半透膜 擴散 滲透 甜粿紙 蛋膜 小分子 大分子 葡萄糖 澱粉 細胞膜' },
+
+  // ---------------- 3-2 酵素工坊 ----------------
+  { id: 'metabolism', zone: 'z32', name: '代謝作用工廠', kind: 'metabFactory', p: [-36, 18], face: [-40, 16], r: 3.6,
+    place: '輸送帶左邊把小珠子串成長鏈，右邊又把長鏈拆回小珠子。',
+    pts: ['較大分子變成較小分子：<b>分解作用</b>；較小分子變成較大分子：<b>合成作用</b>。',
+      '生物體內物質的分解與合成，合稱<b>代謝作用</b>。',
+      '小分子：葡萄糖、胺基酸；大分子：澱粉、蛋白質。',
+      '<b>酵素</b>又稱<b>酶</b>，能參與細胞中多種反應，<b>加速</b>代謝作用。'],
+    flow: ['葡萄糖（小分子）', '澱粉（大分子）'], flowSep: '⇄',
+    quiz: [{ q: '把許多胺基酸連接成蛋白質，屬於哪一種作用？', o: ['分解作用', '合成作用', '消化作用', '蒸散作用'], a: 1,
+      ex: '小分子變成大分子是合成作用；大分子變成小分子才是分解作用。' }],
+    rel: ['lock-key', 'small-intestine'], kw: '代謝作用 分解作用 合成作用 小分子 大分子 胺基酸 葡萄糖 酶' },
+
+  { id: 'lock-key', zone: 'z32', name: '專一性鑰匙屋', kind: 'lockKey', p: [-45, 24], face: [-40, 22], r: 3.4,
+    place: '門口的紫色酵素雕像，只有形狀剛好的受質才卡得進去。',
+    pts: ['能和酵素作用的物質叫做<b>受質</b>。',
+      '酵素和受質的結合具有<b>專一性</b>：特定的反應要由特定的酵素協助。',
+      '例：唾液中的<b>澱粉酶</b>能把飯裡的澱粉分解成有甜味的糖，但不能分解蛋白質。',
+      '反應結束後，酵素的本質<b>不會改變</b>，可以<b>重複使用</b>。',
+      '大部分酵素的主要成分是<b>蛋白質</b>。'],
+    quiz: [{ q: '澱粉酶只能分解澱粉、不能分解蛋白質，這表示酵素具有什麼特性？', o: ['專一性', '用一次就沒了', '只能進行合成作用', '不受溫度影響'], a: 0,
+      ex: '一種酵素只和特定的受質結合，這就是專一性；而且酵素可以重複使用。' }],
+    rel: ['metabolism', 'hot-spring'], kw: '受質 專一性 澱粉酶 重複使用 蛋白質 酵素特性' },
+
+  { id: 'hot-spring', zone: 'z32', name: '酵素溫泉', kind: 'hotSpring', pond: true, p: [-52, 13], face: [-44, 14], r: 4.2,
+    place: '溫泉剛好 37℃，泉邊三根牌子寫著胃、唾液、小腸最喜歡的酸鹼。',
+    pts: ['酵素的活性會受<b>酸鹼性</b>和<b>溫度</b>影響。',
+      '酸鹼性：<b>唾液</b>中的酵素在<b>中性</b>最活躍；<b>胃</b>中的酵素要在<b>酸性</b>環境；<b>小腸</b>中的酵素適合<b>鹼性</b>。',
+      '溫度：還沒到最適溫度前，溫度越高活性越大；超過最適溫度後，活性反而降低，甚至<b>永久失去活性</b>。',
+      '人體內許多酵素約在 <b>37℃</b> 左右活性較佳。'],
+    tip: '吃飯時唾液跟著飯進到胃裡，胃是酸性的，唾液中的酵素就很難繼續分解澱粉了。',
+    quiz: [{ q: '胃中的酵素在哪一種環境下活性最高？', o: ['酸性', '中性', '鹼性', '三種都一樣'], a: 0,
+      ex: '胃液中有鹽酸，胃中的酵素適合酸性；唾液中性、小腸鹼性。' }],
+    rel: ['saliva-lab', 'stomach'], kw: '酸鹼性 溫度 活性 37℃ 最適溫度 失去活性 唾液 胃 小腸' },
+
+  { id: 'saliva-lab', zone: 'z32', name: '唾液實驗室', kind: 'salivaLab', p: [-36, 28], face: [-40.5, 26], r: 3.2,
+    place: '實驗 3-2：一支試管先煮沸，一支沒有，再比比看誰能分解澱粉。',
+    pts: ['甲、乙兩支試管各加 3 mL 唾液；<b>甲</b>放進沸水隔水加熱 5 分鐘，再冷卻到室溫。',
+      '兩管各加 2 mL 澱粉液，放進 <b>37℃</b> 溫水的保麗龍盒，靜置約 15～20 分鐘。',
+      '加本氏液隔水加熱：<b>乙</b>管變色（澱粉被分解成糖），<b>甲</b>管不變色。',
+      '結論：唾液中的酵素經<b>煮沸</b>後失去作用，高溫會讓酵素失去活性。',
+      '水溫控制在 37℃，是因為接近人體溫度，酵素活性較佳。'],
+    quiz: [{ q: '三支試管都裝澱粉液和唾液，分別放在 0℃、37℃、90℃ 的水中，哪一支最快不再對碘液呈藍黑色？', o: ['0℃', '37℃', '90℃', '三支一樣快'], a: 1,
+      ex: '37℃ 酵素活性最好，澱粉最快被分解完；90℃ 酵素失去活性，0℃ 活性很低。' }],
+    rel: ['hot-spring', 'food-test', 'mouth'], kw: '實驗3-2 唾液 澱粉 煮沸 37℃ 本氏液 酵素活性' },
+
+  { id: 'enzyme-history', zone: 'z32', name: '酵素發現史館', kind: 'pyramid', p: [-44, 33], face: [-40, 30], r: 3.2,
+    place: '小金字塔裡展示著古埃及的麵包，一路講到「酵素」這個名詞的誕生。',
+    pts: ['古埃及人做麵餅時，空氣中的野生酵母落到麵糰上自然發酵，烤出蓬鬆的麵包，當時以為是神的贈禮。',
+      '18 世紀義大利生物學家<b>斯巴蘭贊尼</b>，在火雞和鵝的砂囊中發現能分解碎肉和麥粒的液體。',
+      '法國化學家<b>沛因</b>和<b>貝索茲</b>，從大麥和水的磨碎混合物中提煉出能分解澱粉的物質。',
+      '1879 年，德國生理學家<b>屈內</b>創造了「酵素」（enzyme）這個名詞。'],
+    quiz: [{ q: '「酵素」（enzyme）這個名詞是誰創造的？', o: ['斯巴蘭贊尼', '沛因', '屈內', '凡赫芒'], a: 2,
+      ex: '屈內在 1879 年創造了 enzyme 這個名詞。' }],
+    rel: ['lock-key', 'gut-history'], kw: '酵素的發現 古埃及 麵包 斯巴蘭贊尼 砂囊 沛因 貝索茲 屈內 enzyme' },
+
+  // ---------------- 3-3 光合田園 ----------------
+  { id: 'leaf-hall', zone: 'z33', name: '葉片展覽館', kind: 'leafModel', p: [-37, -22], face: [-42, -18], r: 3.6,
+    place: '一片切開的巨大葉子：從上到下是角質層、表皮、葉肉、葉脈、下表皮和氣孔。',
+    pts: ['葉片的構造分成<b>上下表皮、葉肉、葉脈</b>。',
+      '<b>表皮</b>：排列緊密而透明的表皮細胞，保護葉片；多數植物表皮外還有<b>角質層</b>，防止水分散失。',
+      '表皮上散布成對的<b>保衛細胞</b>，中間的縫隙是<b>氣孔</b>，是氣體進出的主要通道，由保衛細胞控制開閉。',
+      '<b>葉肉</b>細胞有顆粒狀的<b>葉綠體</b>，可以進行光合作用製造葡萄糖。',
+      '<b>葉脈</b>：輸送光合作用需要的水分和產生的養分，也能支持葉片。'],
+    quiz: [{ q: '葉片中負責控制氣孔開閉的是？', o: ['角質層', '保衛細胞', '葉脈', '葉肉細胞'], a: 1,
+      ex: '兩個保衛細胞中間的縫隙就是氣孔，由保衛細胞控制開閉。' }],
+    rel: ['photo-factory', 'transpiration'], kw: '葉片 表皮 角質層 保衛細胞 氣孔 葉肉 葉綠體 葉脈' },
+
+  { id: 'photo-factory', zone: 'z33', name: '光合作用工廠', kind: 'photoFactory', p: [-31, -34], face: [-36, -30], r: 3.2,
+    place: '葉子屋頂的工廠：水從地底管線進來，二氧化碳從旁邊飄進來，冒出去的是氧氣。',
+    pts: ['綠色植物可以用<b>光合作用</b>自己製造葡萄糖；<b>葉片</b>是大多數植物進行光合作用的主要器官。',
+      '葉綠體內的<b>葉綠素</b>可以吸收光能。',
+      '原料：<b>水</b>（由根部吸收、經葉脈運輸）＋<b>二氧化碳</b>（由氣孔進入）。',
+      '產物：<b>葡萄糖、氧氣、水</b>；氧氣和水由氣孔排出，養分由葉脈運輸。',
+      '葡萄糖可以直接給細胞用，也能轉換成<b>澱粉</b>等形式儲存，所以可以用碘液檢測澱粉，確認光合作用有沒有進行。',
+      '光合作用吸收二氧化碳、釋出氧氣，對穩定地球大氣和提供生物呼吸都很重要。'],
+    flow: ['水 ＋ 二氧化碳', '葉綠體（光能）', '葡萄糖 ＋ 氧氣 ＋ 水'],
+    quiz: [{ q: '光合作用的原料是？', o: ['葡萄糖和氧氣', '水和二氧化碳', '澱粉和水', '氧氣和二氧化碳'], a: 1,
+      ex: '原料是水和二氧化碳；產物是葡萄糖、氧氣和水。' }],
+    rel: ['leaf-hall', 'light-exp', 'phloem-express'], kw: '光合作用 葉綠素 光能 水 二氧化碳 葡萄糖 氧氣 澱粉' },
+
+  { id: 'light-exp', zone: 'z33', name: '光與光合作用實驗站', kind: 'leafExp', p: [-44, -31], face: [-41, -27], r: 3.2,
+    place: '實驗 3-3：盆栽上有一片葉子被鋁箔包了一半，一週後滴碘液看看。',
+    pts: ['實驗前先把植株放在完全黑暗處約一週，消耗掉葉片原本儲存的澱粉。',
+      '用鋁箔（或不透光貼紙）包住葉片的一部分，移到陽光下一週；鋁箔的目的是<b>遮光</b>。',
+      '剪下葉片：放進<b>沸水</b>加熱，使角質層軟化 → 放進<b>酒精隔水加熱</b>，葉綠素溶到酒精裡，葉片顏色變淡 → 放進熱水漂洗。',
+      '滴碘液：<b>照光</b>的部分呈藍黑色或紫紅色（有澱粉）；<b>未照光</b>的部分呈黃褐色（沒有澱粉）。',
+      '結論：植物進行光合作用需要照光。酒精易燃，不可直接加熱。'],
+    quiz: [{ q: '葉片放在酒精中隔水加熱後，酒精變成綠色，原因是？', o: ['澱粉溶進酒精', '葉綠素溶進酒精', '碘液溶進酒精', '葉片被燒焦'], a: 1,
+      ex: '酒精能溶出葉綠素，讓葉片顏色變淡，滴碘液時比較容易看出顏色變化。' }],
+    rel: ['photo-factory', 'food-test'], kw: '實驗3-3 鋁箔 遮光 酒精 隔水加熱 葉綠素 碘液 澱粉 照光' },
+
+  { id: 'discovery', zone: 'z33', name: '光合作用的發現', kind: 'willow', p: [-51, -15], face: [-44, -9], r: 3.2,
+    willowSign: '2.25 kg → 76.1 kg',
+    place: '大花盆裡的柳樹，重現 1630 年凡赫芒的五年實驗。',
+    pts: ['17 世紀以前，人們以為植物的根、莖、葉都是由土壤「變」出來的。',
+      '1630 年，比利時醫師<b>凡赫芒</b>把約 2.25 公斤的柳條種在 90 公斤的乾燥土壤中，只澆雨水；五年後柳樹重 76.1 公斤，土壤只少了 0.1 公斤。',
+      '他認為柳樹增加的物質是由雨水變來的。結論不完全正確，但用<b>定量</b>方法研究生物學，是當時的創舉。',
+      '19 世紀中期，科學家發現<b>水和二氧化碳</b>是光合作用不可缺少的原料。',
+      '1897 年，德國科學家<b>佩弗</b>根據植物需要陽光才能合成養分，把它命名為「光合作用」。'],
+    quiz: [{ q: '凡赫芒的柳樹實驗中，土壤幾乎沒有減少，說明了什麼？', o: ['柳樹增加的物質主要不是來自土壤', '柳樹不需要水', '土壤會變成柳樹', '柳樹不需要陽光'], a: 0,
+      ex: '柳樹重了 30 多倍，土壤卻幾乎沒少，所以增加的物質主要不是土壤提供的。' }],
+    rel: ['photo-factory'], kw: '凡赫芒 柳樹 土壤 雨水 定量 佩弗 光合作用 命名' },
+
+  // ---------------- 3-4 消化大道 ----------------
+  { id: 'mouth', zone: 'z34', name: '口腔與唾腺', kind: 'mouth', p: [-3, 31], face: [3, 40], r: 3.6, game: 'tract',
+    place: '消化大道第 1 站：張大的嘴巴大門，有牙齒、舌頭，旁邊是唾腺噴泉。',
+    pts: ['人體的消化系統＝<b>消化道</b>＋<b>消化腺</b>。',
+      '消化道順序：<b>口腔 → 咽 → 食道 → 胃 → 小腸 → 大腸 → 肛門</b>。',
+      '口腔：<b>牙齒</b>咬碎、磨細食物；<b>舌頭</b>把食物和唾液攪拌混合。',
+      '<b>唾腺</b>分泌<b>唾液</b>注入口腔，唾液中的酵素可以把澱粉<b>初步分解</b>。'],
+    flow: ['口腔', '咽', '食道', '胃', '小腸', '大腸', '肛門'],
+    quiz: [{ q: '食物在口腔中，哪一種養分會開始被初步分解？', o: ['蛋白質', '脂質', '澱粉', '維生素'], a: 2,
+      ex: '唾液中的酵素可以初步分解澱粉；蛋白質要到胃才開始分解。' }],
+    rel: ['esophagus', 'saliva-lab'], kw: '口腔 牙齒 舌頭 唾腺 唾液 消化道 消化腺 消化系統' },
+
+  { id: 'esophagus', zone: 'z34', name: '咽與食道溜滑梯', kind: 'esophagus', p: [12, 23], face: [6, 22], r: 3.0,
+    place: '消化大道第 2、3 站：從咽的小塔滑下長長的食道，管子會一節一節收縮。',
+    pts: ['<b>咽</b>：調控口腔中的食物進入食道。',
+      '<b>食道</b>：長管狀，可以把食物推進到胃。',
+      '消化道的管壁有肌肉，肌肉收縮產生的局部運動叫做<b>蠕動</b>，可以推進消化道中的食物。'],
+    quiz: [{ q: '消化道管壁肌肉收縮、推進食物的運動叫做？', o: ['蒸散', '蠕動', '擴散', '心搏'], a: 1,
+      ex: '食道藉由蠕動把食物往胃的方向推進。' }],
+    rel: ['mouth', 'stomach'], kw: '咽 食道 蠕動 肌肉 推進' },
+
+  { id: 'stomach', zone: 'z34', name: '胃與胃腺', kind: 'stomach', p: [-2, 13], face: [5, 12], r: 3.6,
+    place: '消化大道第 4 站：囊袋形的大房子，屋頂上的池子冒著胃液泡泡。',
+    pts: ['胃呈<b>囊袋狀</b>，可以容納食物。',
+      '胃壁的<b>胃腺</b>分泌<b>胃液</b>，胃液含有<b>鹽酸</b>和酵素。',
+      '鹽酸能殺死大部分隨食物進來的細菌，也讓胃偏<b>酸性</b>，有利胃液中的酵素<b>分解蛋白質</b>。',
+      '食物在胃中被消化成粥狀，之後進入小腸。'],
+    quiz: [{ q: '胃液可以初步分解哪一種養分？', o: ['澱粉', '蛋白質', '脂質', '纖維素'], a: 1,
+      ex: '胃腺分泌的胃液含鹽酸和酵素，可以初步分解蛋白質。' }],
+    rel: ['hot-spring', 'gut-history', 'small-intestine'], kw: '胃 胃腺 胃液 鹽酸 酸性 蛋白質 細菌 粥狀' },
+
+  { id: 'liver', zone: 'z34', name: '肝臟與膽囊', kind: 'liver', p: [-11, 6], face: [-3, 2], r: 3.6, game: 'glands',
+    place: '紅褐色的大肝臟旁邊，掛著一顆綠色的膽囊小倉庫。',
+    pts: ['<b>肝臟</b>分泌<b>膽汁</b>，先儲存在<b>膽囊</b>，再經導管注入小腸。',
+      '膽汁<b>不含酵素</b>，但能把脂質<b>乳化</b>成脂肪小球。',
+      '肝臟和胰臟都是<b>不在消化道內</b>的消化腺。'],
+    tip: '膽汁是肝臟分泌的，膽囊只負責儲存；「膽汁由膽囊分泌」是常見的錯誤選項。',
+    quiz: [{ q: '下列關於膽汁的敘述，何者正確？', o: ['由膽囊分泌', '含有分解脂質的酵素', '由肝臟分泌，可以乳化脂質', '可以分解蛋白質'], a: 2,
+      ex: '膽汁由肝臟分泌、存在膽囊，不含酵素，但能乳化脂質。' }],
+    rel: ['pancreas', 'small-intestine'], kw: '肝臟 膽汁 膽囊 乳化 脂質 不含酵素 消化腺' },
+
+  { id: 'pancreas', zone: 'z34', name: '胰臟', kind: 'pancreas', p: [13, 3], face: [5, 4], r: 3.2, game: 'glands',
+    place: '一條長長的黃色房子，導管把胰液送往小腸。',
+    pts: ['<b>胰臟</b>分泌<b>胰液</b>，經導管注入小腸。',
+      '胰液可以分解<b>醣類、蛋白質和脂質</b>，三種都能分解。',
+      '小腸前段的<b>膽汁、胰液、腸液</b>都是鹼性的消化液，可以<b>中和胃酸</b>。'],
+    quiz: [{ q: '哪一種消化液可以分解醣類、蛋白質、脂質三種養分？', o: ['唾液', '胃液', '膽汁', '胰液'], a: 3,
+      ex: '胰液三種都能分解；膽汁只能乳化脂質、不含酵素。' }],
+    rel: ['liver', 'small-intestine'], kw: '胰臟 胰液 醣類 蛋白質 脂質 鹼性 中和胃酸 導管' },
+
+  { id: 'small-intestine', zone: 'z34', name: '小腸與絨毛', kind: 'intestine', p: [-6, -10], face: [1, -8], r: 3.8,
+    place: '消化大道第 5 站：彎彎曲曲的長隧道，旁邊是一片「絨毛花園」。',
+    pts: ['小腸是<b>消化食物和吸收養分的主要器官</b>，也是消化道中<b>最長</b>的一段；可吸收養分和大部分的水。',
+      '小腸壁的<b>腸腺</b>分泌<b>腸液</b>，和醣類、蛋白質的分解有關。',
+      '小腸內壁有許多皺褶，皺褶上的指狀突起叫<b>絨毛</b>，可以<b>增加吸收的表面積</b>。',
+      '養分和水進入絨毛內的<b>微血管</b>，再由血管送到全身。',
+      '<b>消化作用</b>：澱粉 → 葡萄糖；蛋白質 → 胺基酸；脂質 → 脂肪酸＋甘油。'],
+    quiz: [{ q: '蛋白質被完全消化後，會變成哪一種小分子？', o: ['葡萄糖', '胺基酸', '脂肪酸', '甘油'], a: 1,
+      ex: '澱粉 → 葡萄糖；蛋白質 → 胺基酸；脂質 → 脂肪酸＋甘油。' },
+    { q: '小腸內壁的絨毛主要功能是？', o: ['分泌鹽酸', '增加吸收的表面積', '磨碎食物', '儲存膽汁'], a: 1,
+      ex: '絨毛讓吸收面積變大，養分和水分更容易被吸收。' }],
+    rel: ['large-intestine', 'membrane-isle', 'vessels'], kw: '小腸 絨毛 腸腺 腸液 吸收 微血管 消化作用 胺基酸 脂肪酸 甘油 最長' },
+
+  { id: 'large-intestine', zone: 'z34', name: '大腸與肛門', kind: 'colon', p: [13, -20], face: [5, -19], r: 3.6,
+    place: '消化大道最後一站：大拱門形的大腸，終點出口就是肛門。',
+    pts: ['<b>大腸</b>吸收食物殘渣中<b>剩餘的水分</b>。',
+      '食物殘渣、剝落的大腸壁細胞和腸內細菌混合形成<b>糞便</b>，由<b>肛門</b>排出體外，叫做<b>排遺</b>。',
+      '大腸的起點是封閉的囊袋狀構造，叫<b>盲腸</b>；人類盲腸末端的指狀突起叫<b>闌尾</b>，通常在腹部右下方。'],
+    quiz: [{ q: '大腸主要吸收的是？', o: ['蛋白質', '剩餘的水分', '澱粉', '膽汁'], a: 1,
+      ex: '養分和大部分的水在小腸吸收，大腸吸收剩下的水分。' }],
+    rel: ['small-intestine', 'mouth'], kw: '大腸 肛門 排遺 糞便 盲腸 闌尾 水分' },
+
+  { id: 'gut-history', zone: 'z34', name: '胃的科學故事館', kind: 'gutMuseum', p: [-12, 20], face: [-4, 19], r: 3.4,
+    place: '館裡有兩個故事：一個醫生從病人肚子上的洞研究胃液，兩個醫生找出胃潰瘍的元兇。',
+    pts: ['1822 年，美國醫生<b>博蒙特</b>救治腹部中槍的<b>聖馬丁</b>，傷口留下一個通往胃的洞。',
+      '他把食物綁在線上放進胃裡觀察，發現：胃液是<b>酸性</b>，<b>鹽酸</b>是關鍵成分；空腹時沒有胃液，進食後才分泌；不同食物的分解速度不一樣。他被稱為「胃生理學之父」。',
+      '1979 年，澳洲的<b>沃倫</b>在胃黏膜發現<b>幽門螺旋桿菌</b>；1981 年<b>馬歇爾</b>親自吞下培養的細菌，果然得了胃炎。',
+      '兩人證實幽門螺旋桿菌是胃炎和<b>消化性潰瘍</b>的主因，獲得 2005 年諾貝爾生理醫學獎；用藥物治療後，復發率降到約 5%。'],
+    quiz: [{ q: '沃倫和馬歇爾發現，造成胃炎與消化性潰瘍的主要原因是？', o: ['壓力太大', '幽門螺旋桿菌感染', '胃液不夠酸', '吃太多澱粉'], a: 1,
+      ex: '他們證實幽門螺旋桿菌侵襲胃壁是主因，改用藥物殺菌治療。' }],
+    rel: ['stomach', 'enzyme-history'], kw: '博蒙特 聖馬丁 胃液 胃生理學之父 沃倫 馬歇爾 幽門螺旋桿菌 消化性潰瘍 諾貝爾' },
+
+  // ---------------- 4-1・4-2 維管束森林 ----------------
+  { id: 'vascular-hall', zone: 'z41', name: '維管束展示館', kind: 'stemHall', p: [12, -40], face: [9, -35], r: 3.6,
+    place: '館旁透明的大莖模型裡，藍色管子往上送水，紅色管子運送養分。',
+    pts: ['部分植物有細長的管狀細胞負責運輸物質，排列成束、上下相連，叫做<b>維管束</b>。',
+      '維管束由根、莖貫穿到葉形成<b>葉脈</b>，也延伸到花和果實；還有<b>支持</b>植物體的功能。',
+      '<b>木質部</b>運輸<b>水分和礦物質</b>；<b>韌皮部</b>運輸光合作用製造的<b>養分</b>。',
+      '在<b>莖</b>中：木質部在<b>內側</b>、韌皮部在<b>外側</b>。在<b>葉脈</b>中：木質部在<b>上側</b>（靠上表皮）、韌皮部在<b>下側</b>。',
+      '生活中的維管束：橘瓣上的橘絡、四季豆的絲、竹筷的孔隙。'],
+    quiz: [{ q: '運輸水分和礦物質的是維管束中的哪一部分？', o: ['木質部', '韌皮部', '形成層', '角質層'], a: 0,
+      ex: '木質部運水分和礦物質；韌皮部運養分。' }],
+    rel: ['stem-plaza', 'root-hair', 'phloem-express'], kw: '維管束 木質部 韌皮部 葉脈 支持 橘絡 內側 外側' },
+
+  { id: 'stem-plaza', zone: 'z41', name: '莖的切片廣場', kind: 'stemSlices', p: [23, -41], face: [20, -36], r: 3.6,
+    place: '廣場上躺著兩片巨大的莖切片：左邊散散的，右邊排成一圈。',
+    pts: ['<b>散生排列</b>：水稻、玉米等植物莖的橫切面上，維管束散布其中。',
+      '<b>環狀排列</b>：向日葵、南瓜等植物莖的橫切面上，維管束排成一圈。',
+      '環狀排列的維管束，木質部和韌皮部之間通常有一層具分裂能力的細胞，叫<b>形成層</b>。',
+      '形成層<b>向內</b>產生新的木質部、<b>向外</b>產生新的韌皮部，讓莖逐漸<b>加粗</b>。',
+      '探討活動 4-1：用描圖紙描繪玉米與向日葵的莖，一般用藍色表示水分運輸、紅色表示養分運輸。'],
+    quiz: [{ q: '下列哪一種植物的莖，維管束呈<b>散生</b>排列？', o: ['向日葵', '南瓜', '玉米', '榕樹'], a: 2,
+      ex: '玉米、水稻是散生排列；向日葵、南瓜是環狀排列，而且有形成層。' }],
+    rel: ['vascular-hall', 'tree-rings'], kw: '散生排列 環狀排列 玉米 水稻 向日葵 南瓜 形成層 加粗 探討活動4-1' },
+
+  { id: 'tree-rings', zone: 'z41', name: '年輪樹墩', kind: 'stump', p: [-2, -42], face: [3, -37], r: 3.6,
+    place: '巨大的樹墩上有一圈圈深淺不同的環紋，一深一淺就是一年。',
+    pts: ['木本植物的莖：<b>樹皮</b>＝韌皮部及其向外的部分；<b>木材</b>＝形成層向內累積的木質部。',
+      '樹皮被環狀破壞或動物啃食 → 韌皮部無法把養分送到根 → 根部壞死、無法吸水 → 枝葉枯萎，最後全株死亡。',
+      '靠近形成層的新木質部會運送水分；靠近中心的舊木質部多已失去運輸功能，所以有些大樹中央腐朽仍能存活。',
+      '<b>年輪</b>：春夏溫暖多雨，細胞長得快，<b>體積大、顏色淺</b>；秋冬寒冷少雨，細胞長得慢，<b>體積小、顏色深</b>。'],
+    quiz: [{ q: '秋冬時節形成的木質部細胞有什麼特徵？', o: ['體積大、顏色淺', '體積小、顏色深', '體積大、顏色深', '體積小、顏色淺'], a: 1,
+      ex: '秋冬寒冷少雨，細胞長得慢，所以小而顏色深。' },
+    { q: '有形成層的莖，細胞由<b>外而內</b>的排列順序是？', o: ['老韌皮部 → 新韌皮部 → 形成層 → 新木質部 → 老木質部', '新韌皮部 → 老韌皮部 → 形成層 → 老木質部 → 新木質部', '形成層 → 新木質部 → 老木質部 → 新韌皮部 → 老韌皮部', '老木質部 → 新木質部 → 形成層 → 新韌皮部 → 老韌皮部'], a: 0,
+      ex: '形成層向外產生新韌皮部、向內產生新木質部，所以越靠近形成層的越新。' }],
+    rel: ['stem-plaza', 'phloem-express'], kw: '年輪 樹皮 木材 形成層 春夏 秋冬 環狀剝皮 腐朽' },
+
+  { id: 'root-hair', zone: 'z41', name: '根毛水泵站', kind: 'roots', p: [29, -33], face: [25, -33], r: 3.2,
+    place: '巨大的根從地面冒出來，滿是細細的根毛，水滴沿著透明管子往上爬。',
+    pts: ['植物需要的水分和礦物質，主要由<b>根部</b>吸收。',
+      '有些植物根部的表皮細胞向外突起形成<b>根毛</b>，可以<b>增加吸收的表面積</b>。',
+      '水和礦物質進入根部後，經<b>木質部</b>由下往上、<b>單向</b>運輸到莖和葉。',
+      '少部分的水給細胞利用，大部分的水變成水蒸氣，從<b>氣孔</b>散失到空氣中。',
+      '施肥添加的氮、磷、鉀等礦物質，也是由木質部運送。'],
+    quiz: [{ q: '根毛最主要的功能是？', o: ['增加吸收水分和礦物質的表面積', '製造葡萄糖', '把養分送到葉片', '進行蒸散作用'], a: 0,
+      ex: '根毛是根部表皮細胞向外的突起，能增加吸收面積。' }],
+    rel: ['transpiration', 'vascular-hall'], kw: '根毛 根 吸收 水分 礦物質 木質部 單向 肥料 氮 磷 鉀' },
+
+  { id: 'transpiration', zone: 'z41', name: '蒸散塔', kind: 'transpTower', p: [19, -29], face: [15, -31], r: 3.0,
+    place: '塔頂的大葉子有一個會開關的氣孔，水蒸氣一陣一陣往上飄。',
+    pts: ['水蒸氣由氣孔散失的現象叫做<b>蒸散作用</b>。',
+      '木質部從根、莖到葉連成一條充滿水的細管，水從氣孔蒸散時產生<b>拉力</b>，把水往上拉。',
+      '蒸散作用是植物體內水分<b>向上運輸最主要的動力</b>。',
+      '<b>氣孔</b>由成對的保衛細胞調節：一般<b>白天開、夜晚關</b>；植物<b>缺水</b>時，即使白天也會關閉，以減少水分散失。',
+      '鮮花剪下太久才插進水裡，空氣跑進木質部會妨礙運水，花就垂頭了。'],
+    quiz: [{ q: '植物體內水分向上運輸，最主要的動力是？', o: ['心搏', '蒸散作用', '光合作用', '重力'], a: 1,
+      ex: '水從氣孔蒸散時產生拉力，把木質部中的水往上拉。' }],
+    rel: ['root-hair', 'leaf-hall', 'celery-lab'], kw: '蒸散作用 氣孔 保衛細胞 拉力 白天 夜晚 缺水 水蒸氣' },
+
+  { id: 'phloem-express', zone: 'z41', name: '韌皮部快遞站', kind: 'express', p: [31, -23], face: [29, -27], r: 3.2,
+    place: '「養分快遞島」名字的由來：韌皮部就是植物體內的快遞公司。',
+    pts: ['養分運輸的原則：由<b>供應</b>的地方送到<b>需求</b>的地方。',
+      '葉片光合作用產生的養分，經<b>韌皮部</b>向下送到莖或根，供利用或儲存；也能向上送到莖頂的新芽，供生長所需。',
+      '所以養分運輸可以<b>雙向</b>；水分運輸（木質部）則是<b>由下往上、單向</b>。'],
+    flow: ['葉片（供應）', '韌皮部', '根、莖、新芽（需求）'],
+    quiz: [{ q: '關於植物體內的運輸，下列何者正確？', o: ['木質部運送養分，可以雙向', '韌皮部運送養分，由供應處送到需求處，可以雙向', '韌皮部運送水分，由下往上', '木質部運送水分，可以雙向'], a: 1,
+      ex: '韌皮部運養分、可雙向；木質部運水和礦物質、由下往上單向。' }],
+    rel: ['photo-factory', 'tree-rings', 'vascular-hall'], kw: '韌皮部 養分運輸 由供往需 雙向 單向 新芽 儲存' },
+
+  { id: 'celery-lab', zone: 'z41', name: '芹菜實驗站', kind: 'celeryLab', p: [-8, -30], face: [-2, -26], r: 3.2,
+    place: '實驗 4-1：兩枝芹菜插在紅色水裡，一枝有葉、一枝沒葉，比比看誰喝得多。',
+    pts: ['甲、乙量筒各裝有色溶液，插入粗細相近的芹菜；把<b>乙</b>的葉片全部切除。',
+      '芹菜要<b>在水中切</b>，避免空氣進入，妨礙水分運輸。',
+      '結果：<b>有葉片</b>的甲量筒液面下降較多 → 葉片的氣孔多，水分散失得快。',
+      '葉柄橫切面上被染色、呈<b>環狀</b>排列的部分，就是運送水分的<b>木質部</b>。'],
+    quiz: [{ q: '芹菜實驗中，有葉片的那一組液面下降比較多，原因是？', o: ['葉片會吸收染料', '葉片有許多氣孔，蒸散作用讓水分散失得快', '葉片進行光合作用消耗染料', '沒有葉片的芹菜會漏水'], a: 1,
+      ex: '葉片的氣孔多，蒸散作用旺盛，木質部的水就被拉得快。' }],
+    rel: ['transpiration', 'vascular-hall'], kw: '實驗4-1 芹菜 有色溶液 葉片 蒸散 水中切 木質部 環狀' },
+
+  // ---------------- 4-3 心臟城 ----------------
+  { id: 'heart', zone: 'z43', name: '心臟大屋', kind: 'heart', p: [40, 0], face: [40, 8], r: 5.0, game: 'circulation',
+    place: '會跳動的心形大屋。注意：屋子左邊的窗是「右」心房、右心室，因為左右是用心臟本人的方向來看。',
+    pts: ['<b>心血管系統</b>＝心臟＋血管＋血液，是人體運輸物質的主要系統。',
+      '心臟位在胸腔中央<b>偏左</b>，有四個腔室：上方是<b>左、右心房</b>，下方是<b>左、右心室</b>。',
+      '心房與心室之間、心室與動脈之間有<b>瓣膜</b>，可以防止血液<b>逆流</b>。',
+      '心臟由肌肉構成，規律的收縮與舒張叫做<b>心搏</b>，是血液流動的動力。',
+      '<b>收縮</b>：血液由心室擠進動脈；<b>舒張</b>：血液由靜脈流回心房，再進入心室。'],
+    tip: '面對心臟圖時，左心房、左心室在你的右手邊。',
+    quiz: [{ q: '心臟中防止血液逆流的構造是？', o: ['瓣膜', '心房', '微血管', '血小板'], a: 0,
+      ex: '心房與心室之間、心室與動脈之間都有瓣膜。' }],
+    rel: ['vessels', 'lungs', 'tissues'], kw: '心臟 心房 心室 瓣膜 心搏 收縮 舒張 心血管系統' },
+
+  { id: 'vessels', zone: 'z43', name: '血管三兄弟', kind: 'vesselRings', p: [56, -6], face: [49, -6], r: 3.6,
+    place: '三個大圓環雕像：厚壁的動脈、薄壁的靜脈，還有細得只剩一層細胞的微血管。',
+    pts: ['<b>動脈</b>：把血液帶<b>離開</b>心臟；管壁<b>最厚</b>、彈性<b>最佳</b>、血液流速<b>最快</b>、血壓<b>最大</b>。',
+      '<b>微血管</b>：連接動脈和靜脈，是<b>最細</b>的血管；管壁只有<b>一層細胞</b>，彈性最差，流速<b>最慢</b>；是血液和組織細胞<b>交換物質</b>的主要場所。',
+      '<b>靜脈</b>：把血液帶<b>回</b>心臟；管壁比動脈薄、彈性較差、流速較慢，血壓最小；有些靜脈內有<b>瓣膜</b>防止逆流。',
+      '心臟收縮把血液壓入動脈，動脈管壁擴張又復原叫做<b>脈搏</b>；血管壁承受的壓力叫做<b>血壓</b>。'],
+    quiz: [{ q: '血液和組織細胞交換氣體、養分和廢物，主要發生在哪一種血管？', o: ['動脈', '靜脈', '微血管', '主動脈'], a: 2,
+      ex: '微血管管壁只有一層細胞、流速最慢，最適合交換物質。' }],
+    rel: ['heart', 'pulse-lab', 'fish-pond'], kw: '動脈 靜脈 微血管 管壁 彈性 流速 血壓 脈搏 瓣膜' },
+
+  { id: 'blood-cells', zone: 'z43', name: '血球宿舍', kind: 'bloodHouse', p: [56, 8], face: [49, 8], r: 3.6,
+    place: '門前的黃色泳池就是血漿，紅血球、白血球、血小板都住這裡。',
+    pts: ['血液＝<b>血漿</b>＋<b>血球</b>。血漿主要成分是水，還有養分、廢物、二氧化碳、抗體和激素等。',
+      '<b>紅血球</b>：雙凹圓盤狀，成熟時<b>沒有細胞核</b>，是數量<b>最多</b>的血球；含<b>血紅素</b>，可以攜帶氧氣。',
+      '<b>白血球</b>：<b>有細胞核</b>，數量<b>最少</b>、體積<b>最大</b>；有些能變形穿過微血管壁，吞噬病原體。',
+      '<b>血小板</b>：不規則狀，沒有細胞核，體積<b>最小</b>；受傷出血時幫助血液<b>凝固</b>。'],
+    quiz: [{ q: '可以攜帶氧氣的血球是？', o: ['白血球', '紅血球', '血小板', '淋巴球'], a: 1,
+      ex: '紅血球內的血紅素能和氧氣結合。' },
+    { q: '下列哪一種血球具有細胞核？', o: ['成熟的紅血球', '白血球', '血小板', '三種都沒有'], a: 1,
+      ex: '白血球有細胞核；成熟的紅血球和血小板都沒有。' }],
+    rel: ['castle', 'heart'], kw: '血液 血漿 血球 紅血球 白血球 血小板 血紅素 細胞核 凝固 抗體 激素' },
+
+  { id: 'pulse-lab', zone: 'z43', name: '心音與脈搏站', kind: 'pulseLab', p: [24, -6], face: [22, -1], r: 3.2,
+    place: '實驗 4-2：戴上聽診器聽「撲、通」，再用兩根手指摸手腕的脈搏。',
+    pts: ['<b>心音</b>：心搏時瓣膜關閉後，血液衝擊瓣膜與心壁肌肉產生的聲音。每次心搏有兩個心音：第一個低而長（像「撲」），第二個高而短（像「通」）。',
+      '用食指和中指輕按手腕靠大拇指的一側，可以摸到<b>脈搏</b>；摸到的是<b>動脈</b>的搏動。',
+      '脈搏隨心搏跳動，所以同一時間<b>脈搏次數＝心搏次數</b>；運動後兩者都會<b>增加</b>。',
+      '正常人休息時心跳平均每分鐘約 72 下；心律不整若伴隨暈眩、心悸或胸悶，要趕快就醫。',
+      '聽診器會放大音量，不可以敲打玩鬧。'],
+    quiz: [{ q: '小明一分鐘測到心搏 80 次，同一時間他的脈搏約是幾次？', o: ['40 次', '80 次', '160 次', '無法判斷'], a: 1,
+      ex: '脈搏是動脈隨心搏擴張、復原，所以次數和心搏相同。' }],
+    rel: ['vessels', 'heart'], kw: '實驗4-2 心音 脈搏 聽診器 撲 通 運動 心律不整 72' },
+
+  { id: 'fish-pond', zone: 'z43', name: '魚尾鰭觀察池', kind: 'fishPond', pond: true, p: [24, 10], face: [20, 10], r: 4.0,
+    place: '探討活動 4-2：把小魚的尾鰭放在顯微鏡下，就能看到血液在流動。',
+    pts: ['用溼棉花蓋住小魚的身體和鰓，露出尾鰭，用複式顯微鏡先低倍、再高倍觀察；要不時滴水保持溼潤。',
+      '血液在<b>較粗</b>的血管中流得<b>較快</b>，在<b>較細</b>的血管中流得<b>較慢</b>。',
+      '先找到最細的<b>微血管</b>：血液流進微血管之前的是<b>小動脈</b>，流出之後的是<b>小靜脈</b>。',
+      '複式顯微鏡看到的像，和實際情形<b>上下顛倒、左右相反</b>。'],
+    quiz: [{ q: '觀察魚尾鰭時，血液從某條血管流<b>入</b>微血管，那條血管是？', o: ['小動脈', '小靜脈', '大靜脈', '淋巴管'], a: 0,
+      ex: '血液流向：小動脈 → 微血管 → 小靜脈。' }],
+    rel: ['vessels', 'tissues'], kw: '探討活動4-2 魚 尾鰭 顯微鏡 微血管 小動脈 小靜脈 流速 上下顛倒' },
+
+  // ---------------- 4-4 循環防線 ----------------
+  { id: 'lungs', zone: 'z44', name: '肺泡交換站', kind: 'lungs', p: [41, -22], face: [41, -16], r: 3.8, game: 'circulation',
+    place: '肺循環的終點：藍色的路把缺氧血送來，紅色的路把充氧血送回心臟。',
+    pts: ['<b>肺循環</b>：心臟與肺臟之間的循環。',
+      '暗紅色的<b>缺氧血</b>由<b>右心室</b>出發，經<b>肺動脈</b>送往肺臟。',
+      '在肺部微血管：二氧化碳擴散進入<b>肺泡</b>，肺泡中的氧氣擴散進入微血管，血液變成鮮紅色的<b>充氧血</b>。',
+      '充氧血經<b>肺靜脈</b>回到<b>左心房</b>，再進入左心室，準備進行體循環。'],
+    flow: ['右心室', '肺動脈', '肺部微血管', '肺靜脈', '左心房'],
+    tip: '肺動脈流的是缺氧血、肺靜脈流的是充氧血，和體循環剛好相反，很常考。島上的藍色路代表缺氧血、紅色路代表充氧血。',
+    quiz: [{ q: '肺動脈中流的血液是？', o: ['充氧血，流向肺', '缺氧血，流向肺', '充氧血，流回心臟', '缺氧血，流回心臟'], a: 1,
+      ex: '肺動脈把右心室的缺氧血送到肺；肺靜脈把充氧血送回左心房。' }],
+    rel: ['heart', 'tissues'], kw: '肺循環 肺動脈 肺靜脈 肺泡 缺氧血 充氧血 右心室 左心房 氧氣 二氧化碳' },
+
+  { id: 'tissues', zone: 'z44', name: '全身組織站', kind: 'tissues', p: [40, 24], face: [40, 18], r: 3.4, game: 'circulation',
+    place: '體循環的終點：一堆彩色的組織細胞，紅色的路送來氧氣，藍色的路帶走二氧化碳。',
+    pts: ['<b>體循環</b>：心臟與全身之間的循環；體循環和肺循環<b>同時</b>進行。',
+      '鮮紅色的充氧血由<b>左心室</b>出發，經<b>主動脈</b>、小動脈、微血管送到全身。',
+      '在微血管：氧氣擴散到組織細胞，細胞產生的二氧化碳等廢物擴散進入微血管，血液變成暗紅色的<b>缺氧血</b>。',
+      '缺氧血經小靜脈匯集到<b>大靜脈</b>，回到<b>右心房</b>，再進入右心室，準備進行肺循環。'],
+    flow: ['左心室', '主動脈', '小動脈', '微血管', '小靜脈', '大靜脈', '右心房'],
+    quiz: [{ q: '體循環中，氧氣是怎麼移動的？', o: ['由組織細胞擴散進入微血管', '由微血管擴散到組織細胞', '由肺泡進入組織細胞', '由靜脈直接進入心室'], a: 1,
+      ex: '氧氣由微血管擴散到組織細胞；二氧化碳則由組織細胞擴散進入微血管。' }],
+    rel: ['lungs', 'heart', 'lymph'], kw: '體循環 左心室 主動脈 小動脈 微血管 小靜脈 大靜脈 右心房 充氧血 缺氧血' },
+
+  { id: 'lymph', zone: 'z44', name: '淋巴結站', kind: 'lymphNodes', p: [24, 25], face: [26, 18], r: 3.4,
+    place: '綠色的細管串著幾顆豆子形的小屋，那是淋巴結，白血球就駐守在裡面。',
+    pts: ['人體的<b>循環系統</b>包含心血管系統和<b>淋巴系統</b>；淋巴系統包括淋巴、淋巴管和淋巴結。',
+      '部分血漿由微血管滲出到組織細胞間，叫做<b>組織液</b>；組織液滲入淋巴管後，叫做<b>淋巴</b>。',
+      '淋巴在<b>淋巴管</b>中流動，最後進入<b>靜脈</b>，重新回到心血管系統。',
+      '顆粒狀的<b>淋巴結</b>會過濾病原體和異物，由聚集在其中的白血球清除；感冒時有時會發現頸部淋巴結腫脹。'],
+    flow: ['血漿', '組織液', '淋巴', '靜脈'],
+    quiz: [{ q: '淋巴在淋巴管中流動，最後會進入哪裡？', o: ['動脈', '靜脈', '小腸', '肺泡'], a: 1,
+      ex: '淋巴經淋巴管進入靜脈，回到心血管系統。' }],
+    rel: ['castle', 'tissues'], kw: '淋巴系統 淋巴 淋巴管 淋巴結 組織液 血漿 靜脈 過濾 病原體' },
+
+  { id: 'castle', zone: 'z44', name: '三道防線城堡', kind: 'castle', p: [50, 22], face: [44, 18], r: 4.2,
+    place: '外牆、內院、高塔，剛好是人體防禦的三道防線。',
+    pts: ['<b>第一道防線</b>：<b>皮膚與黏膜</b>，阻擋病原體入侵。',
+      '<b>第二道防線</b>：傷口附近的白血球吞噬病原體；沒有及時清除時會出現紅、熱、腫、痛的<b>發炎反應</b>，讓更多血液和白血球來到受傷部位。',
+      '<b>第三道防線</b>：<b>專一性防禦作用</b>，由稱為<b>淋巴球</b>的特殊白血球負責；有些破壞受感染的細胞或直接清除病原體，有些製造<b>抗體</b>。',
+      '部分淋巴球具有<b>記憶性</b>，再次接觸同一種病原體時能更快反應。',
+      '<b>過敏反應</b>：防禦作用把無害的物質（過敏原，例如花粉、塵蟎）當成威脅；最好的處理方式是避免接觸過敏原。'],
+    quiz: [{ q: '傷口出現紅、熱、腫、痛，屬於第幾道防線的作用？', o: ['第一道', '第二道', '第三道', '都不是'], a: 1,
+      ex: '發炎反應是第二道防線：白血球吞噬病原體。' }],
+    rel: ['blood-cells', 'vaccine', 'lymph'], kw: '防禦作用 三道防線 皮膚 黏膜 發炎反應 白血球 淋巴球 抗體 專一性 記憶性 過敏原' },
+
+  { id: 'vaccine', zone: 'z44', name: '疫苗研究所', kind: 'vaccineLab', p: [32, 36], face: [29, 37], r: 3.4,
+    place: '研究所旁邊站著一頭乳牛：疫苗的故事要從牛痘說起。',
+    pts: ['英國醫師<b>簡納</b>聽說得過<b>牛痘</b>的擠牛乳少女，不會得致命的<b>天花</b>。',
+      '他把牛痘膿液接種到一位八歲男童手臂上；兩個月後再接種天花膿液，男童沒有出現天花症狀。',
+      '<b>疫苗</b>的構造和病原體相似，能引發淋巴球產生<b>記憶性</b>；病原體真的入侵時，防禦作用會<b>更快、更強</b>。',
+      '防禦作用通常針對<b>特定</b>病原體，所以要打好幾種疫苗；流感病毒突變快，要<b>每年</b>重新施打。'],
+    quiz: [{ q: '施打疫苗能預防疾病，主要是利用第三道防線的哪一種特性？', o: ['皮膚可以阻擋病原體', '淋巴球的記憶性', '紅血球攜帶氧氣', '血小板幫助凝血'], a: 1,
+      ex: '疫苗讓淋巴球先「記住」病原體，真正入侵時能快速消滅它。' }],
+    rel: ['castle'], kw: '疫苗 簡納 牛痘 天花 記憶性 淋巴球 流感 預防注射' },
+];
+
+const NPCS = [
+  { id: 'guide', name: '小滴', role: '水滴導遊', kind: 'droplet', p: [8.5, 48], color: '#62bfe8',
+    lines: ['歡迎來到養分快遞島！我是小滴，一顆從根毛一路旅行到氣孔的水滴。',
+      '這座島照國中自然第 3、4 章蓋成：西邊是營養市場（3-1）和酵素工坊（3-2），西北高地是光合田園（3-3），中間這條粉紅色大道是消化大道（3-4）。',
+      '北邊是維管束森林（4-1、4-2），東邊是心臟城（4-3）和循環防線（4-4）。紅色的路是充氧血，藍色的路是缺氧血喔！',
+      '點地面走路，點建築或名牌看重點、答題賺 ATP。七個區域全破，就能領榮譽島民證！'] },
+  { id: 'rice', name: '米米', role: '一顆白飯', kind: 'rice', p: [-6, 36.5], color: '#e9b04f',
+    lines: ['我是一顆白飯！等一下要從口腔出發，沿著消化大道一路旅行。', '唾液會先把我身上的澱粉初步分解。你能幫我排出消化道的順序嗎？'], game: 'tract' },
+  { id: 'amy', name: '阿酶', role: '澱粉酶', kind: 'enzyme', p: [-43.5, 18], color: '#9b7ad8',
+    lines: ['我是澱粉酶阿酶，只抓得住澱粉，其他受質我可抓不住。', '工作完我還是原來的我，可以一直重複使用！不過太燙的話，我就永遠罷工了。', '想不想挑戰配對：哪個消化腺分泌哪種消化液？'], game: 'glands' },
+  { id: 'leafy', name: '葉葉', role: '葉綠體', kind: 'chloro', p: [-35, -29], color: '#6cc46a',
+    lines: ['我住在葉肉細胞裡，用葉綠素吸收光能，把水和二氧化碳變成葡萄糖！', '產生的氧氣從氣孔跑出去，給大家呼吸。'] },
+  { id: 'redcell', name: '小紅', role: '紅血球', kind: 'rbc', p: [28, 2], color: '#e95b5b',
+    lines: ['我是紅血球，沒有細胞核，靠血紅素帶著氧氣環島。', '紅色的路是充氧血、藍色的路是缺氧血。要不要幫我排一排血液循環的路線？'], game: 'circulation' },
+  { id: 'wbc', name: '白白', role: '白血球', kind: 'wbc', p: [44.5, 25.5], color: '#b9c3d6',
+    lines: ['我是白血球，數量最少、體積最大，而且有細胞核。', '一看到病原體，我就變形穿過微血管壁，把它吞掉！'] },
+];
+
+const GAMES = {
+  tract: { name: '消化道排排看', type: 'order', reward: 5,
+    rounds: [{ title: '食物在消化道中經過的順序', items: ['口腔', '咽', '食道', '胃', '小腸', '大腸', '肛門'],
+      done: '口腔 → 咽 → 食道 → 胃 → 小腸 → 大腸 → 肛門。肝臟和胰臟是消化腺，不在消化道裡！' }] },
+  circulation: { name: '血液循環接龍', type: 'order', reward: 5,
+    rounds: [{ title: '第 1 回：體循環', items: ['左心室', '主動脈', '小動脈', '微血管', '小靜脈', '大靜脈', '右心房'],
+      done: '體循環：充氧血從左心室出發，最後變成缺氧血回到右心房。' },
+    { title: '第 2 回：肺循環', items: ['右心室', '肺動脈', '肺部微血管', '肺靜脈', '左心房'],
+      done: '肺循環：缺氧血從右心室出發，在肺泡換成充氧血，回到左心房。' }] },
+  glands: { name: '消化腺配對', type: 'match', reward: 5,
+    pairs: [['唾腺', '唾液：初步分解澱粉'], ['胃腺', '胃液：初步分解蛋白質'], ['肝臟', '膽汁：先存在膽囊，乳化脂質'],
+      ['胰臟', '胰液：分解醣類、蛋白質、脂質'], ['腸腺', '腸液：與醣類、蛋白質的分解有關']] },
+};
+
+// ================= 核心：渲染器、材質、地形、水、道路 =================
+const $ = (s, el = document) => el.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rand = mulberry32(20261110);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const V3 = THREE.Vector3;
+const FONT = 'Huninn, "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif';
+
+const stage = $('#stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xd5f1f7, 90, 260);
+const camera = new THREE.PerspectiveCamera(36, 1, 0.5, 900);
+
+const hemi = new THREE.HemisphereLight(0xfffaf0, 0x9ccfb0, 1.55);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff1d8, 2.2);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0005;
+sun.shadow.normalBias = 0.04;
+sun.shadow.radius = 2.5;
+scene.add(sun, sun.target);
+const SUN_DIR = new V3(-0.45, 1, 0.55).normalize();
+function setShadowSpan(span) {
+  const c = sun.shadow.camera;
+  if (c.right === span) return;
+  c.left = -span; c.right = span; c.top = span; c.bottom = -span; c.near = 1; c.far = 260; c.updateProjectionMatrix();
+}
+setShadowSpan(42);
+
+// 三階卡通明暗
+const GRAD = new THREE.DataTexture(new Uint8Array([150, 215, 255]), 3, 1, THREE.RedFormat);
+GRAD.minFilter = GRAD.magFilter = THREE.NearestFilter; GRAD.needsUpdate = true;
+
+// 「滾筒世界」彎曲：離鏡頭越遠，地平線越往下彎
+const BEND = { k: { value: 0 }, d: { value: 30 } };
+const PROJECT_BENT = THREE.ShaderChunk.project_vertex.replace(
+  'gl_Position = projectionMatrix * mvPosition;',
+  'float bz = max(0.0, -mvPosition.z - uBendD); mvPosition.y -= uBendK * bz * bz;\n\tgl_Position = projectionMatrix * mvPosition;');
+function bendify(m) {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uBendK = BEND.k; sh.uniforms.uBendD = BEND.d;
+    sh.vertexShader = 'uniform float uBendK;\nuniform float uBendD;\n' + sh.vertexShader.replace('#include <project_vertex>', PROJECT_BENT);
+  };
+  return m;
+}
+const matCache = new Map();
+function toon(color, o = {}) {
+  const key = color + '|' + JSON.stringify(o);
+  let m = matCache.get(key);
+  if (!m) {
+    m = bendify(new THREE.MeshToonMaterial({ color: new THREE.Color(color), gradientMap: GRAD, ...o }));
+    if (o.transparent) m.depthWrite = false;
+    matCache.set(key, m);
+  }
+  return m;
+}
+function basic(color, o = {}) { return bendify(new THREE.MeshBasicMaterial({ color: new THREE.Color(color), ...o })); }
+
+// ---------- 幾何小工具 ----------
+const geoCache = new Map();
+function cached(key, make) { let g = geoCache.get(key); if (!g) { g = make(); geoCache.set(key, g); } return g; }
+function roundedBox(w, h, d, r) {
+  r = Math.max(0.01, Math.min(r, w / 2 - 0.01, h / 2 - 0.01, d / 2 - 0.01));
+  const iw = w - 2 * r, ih = h - 2 * r, cr = Math.min(iw, ih) * 0.18;
+  const s = new THREE.Shape();
+  const x0 = -iw / 2, y0 = -ih / 2;
+  s.moveTo(x0 + cr, y0); s.lineTo(x0 + iw - cr, y0); s.quadraticCurveTo(x0 + iw, y0, x0 + iw, y0 + cr);
+  s.lineTo(x0 + iw, y0 + ih - cr); s.quadraticCurveTo(x0 + iw, y0 + ih, x0 + iw - cr, y0 + ih);
+  s.lineTo(x0 + cr, y0 + ih); s.quadraticCurveTo(x0, y0 + ih, x0, y0 + ih - cr);
+  s.lineTo(x0, y0 + cr); s.quadraticCurveTo(x0, y0, x0 + cr, y0);
+  const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(0.01, d - 2 * r), bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 3, curveSegments: 4 });
+  g.center(); g.computeVertexNormals();
+  return g;
+}
+const G = {
+  box: (w, h, d) => cached(`b${w},${h},${d}`, () => new THREE.BoxGeometry(w, h, d)),
+  rbox: (w, h, d, r = 0.18) => cached(`rb${w},${h},${d},${r}`, () => roundedBox(w, h, d, r)),
+  cyl: (rt, rb, h, s = 20) => cached(`c${rt},${rb},${h},${s}`, () => new THREE.CylinderGeometry(rt, rb, h, s)),
+  sph: (r, ws = 20, hs = 14) => cached(`s${r},${ws},${hs}`, () => new THREE.SphereGeometry(r, ws, hs)),
+  hemi: (r) => cached(`h${r}`, () => new THREE.SphereGeometry(r, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2)),
+  cone: (r, h, s = 18) => cached(`co${r},${h},${s}`, () => new THREE.ConeGeometry(r, h, s)),
+  cap: (r, l, rs = 16) => cached(`ca${r},${l},${rs}`, () => new THREE.CapsuleGeometry(r, l, 6, rs)),
+  tor: (R, r, arc = Math.PI * 2, ts = 32) => cached(`t${R},${r},${arc},${ts}`, () => new THREE.TorusGeometry(R, r, 10, ts, arc)),
+  plane: (w, h) => cached(`p${w},${h}`, () => new THREE.PlaneGeometry(w, h)),
+  circle: (r) => cached(`ci${r}`, () => new THREE.CircleGeometry(r, 40)),
+};
+function add(parent, geo, mat, x = 0, y = 0, z = 0, o = {}) {
+  const m = new THREE.Mesh(geo, typeof mat === 'string' ? toon(mat) : mat);
+  m.position.set(x, y, z);
+  if (o.order) m.rotation.order = o.order;
+  if (o.rx) m.rotation.x = o.rx; if (o.ry) m.rotation.y = o.ry; if (o.rz) m.rotation.z = o.rz;
+  if (o.s) m.scale.setScalar(o.s);
+  if (o.sc) m.scale.set(o.sc[0], o.sc[1], o.sc[2]);
+  m.castShadow = o.cast !== false; m.receiveShadow = o.recv !== false;
+  parent.add(m);
+  return m;
+}
+function mergeGeos(parts) {
+  const pos = [], nor = [], idx = []; let off = 0;
+  for (const g of parts) {
+    const p = g.attributes.position, n = g.attributes.normal;
+    for (let i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(n.getX(i), n.getY(i), n.getZ(i)); }
+    if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(g.index.getX(i) + off);
+    else for (let i = 0; i < p.count; i++) idx.push(i + off);
+    off += p.count;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  out.setIndex(idx);
+  return out;
+}
+function xf(geo, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1 } = {}) {
+  const g = geo.clone();
+  const m = new THREE.Matrix4().compose(new V3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new V3(sx, sy, sz));
+  g.applyMatrix4(m); return g;
+}
+
+// ---------- 文字貼圖 ----------
+function roundRect(x, X, Y, W, H, R) { x.beginPath(); x.moveTo(X + R, Y); x.arcTo(X + W, Y, X + W, Y + H, R); x.arcTo(X + W, Y + H, X, Y + H, R); x.arcTo(X, Y + H, X, Y, R); x.arcTo(X, Y, X + W, Y, R); x.closePath(); }
+function textTex(lines, { w = 512, h = 160, bg = '#f6dfb0', fg = '#5a4332', size = 64, border = '#b8875a', radius = 36, lw = 10 } = {}) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  if (bg) { roundRect(x, lw / 2 + 2, lw / 2 + 2, w - lw - 4, h - lw - 4, radius); x.fillStyle = bg; x.fill(); if (border) { x.lineWidth = lw; x.strokeStyle = border; x.stroke(); } }
+  x.fillStyle = fg; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const L = Array.isArray(lines) ? lines : [lines];
+  L.forEach((t, i) => {
+    let s = typeof size === 'number' ? size : size[i];
+    x.font = `${s}px ${FONT}`;
+    while (x.measureText(t).width > w - 40 && s > 12) { s -= 2; x.font = `${s}px ${FONT}`; }
+    const total = L.length; const lh = (typeof size === 'number' ? size : size[0]) * 1.18;
+    x.fillText(t, w / 2, h / 2 + (i - (total - 1) / 2) * lh + 2);
+  });
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+function texMat(tex, o = {}) { return bendify(new THREE.MeshToonMaterial({ map: tex, gradientMap: GRAD, ...o })); }
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+
+// ================= 地形 =================
+const PL = { x: -36, z: -28, r: 13, h: 2.6 };   // 實驗高地
+const ISLET = { x: -61, z: 53 };
+const SANDBAR = [[-45, 40], [-57, 50]];
+const RIVER = [[-22, -27.5], [-21.5, -18], [-20.5, -6], [-21.5, 6], [-24.5, 20], [-28, 34], [-32, 47], [-36, 64]];
+const PONDS = [{ x: -52, z: 13, r: 3.1 }, { x: 24, z: 10, r: 3.0 }];
+const SPRING = { a: [-31.5, -26.5], b: [-25.6, -27.3], r: 1.9, y: 3.45 };
+const BRIDGES = [
+  { x: -21.1, z: 2, len: 8, w: 2.8, ang: 0.05, y: 1.3 },
+  { x: -28.9, z: 37, len: 8, w: 2.8, ang: -0.26, y: 1.3 },
+];
+const PIER = { x: 4, z0: 55, z1: 72, w: 3.2, y: 1.15 };
+const P_ = (type, pts) => ({ type, pts });
+const PATHS = [
+  P_('pink', [[4, 54], [4, 40], [4, 30], [6, 22], [5, 12], [3, 2], [1, -8], [4, -18], [6, -26], [6, -34]]),
+  P_('dirt', [[4, 30], [0.5, 30.5]]), P_('dirt', [[6, 22], [8.5, 22.5]]), P_('dirt', [[5, 12], [1.5, 12.5]]), P_('dirt', [[3, 2], [9.5, 2.5]]),
+  P_('dirt', [[1, -8], [-2, -9]]), P_('dirt', [[4, -18], [9.5, -19]]), P_('dirt', [[5, 17], [-8.5, 19.5]]),
+  P_('dirt', [[3, 2], [-4, -1], [-16, 1.6], [-25.5, 2.2], [-31, 0], [-34, -1.5]]),
+  P_('dirt', [[-31, 0], [-40, -1], [-44, -2]]), P_('dirt', [[-40, -1], [-42, -9], [-42, -15], [-42, -19]]),
+  P_('dirt', [[-42, -19], [-43, -24], [-41, -28]]), P_('dirt', [[-41, -28], [-36, -31], [-33.5, -32]]),
+  P_('dirt', [[-31, 0], [-36, 8], [-38.5, 8.5]]), P_('dirt', [[-36, 8], [-39, 13], [-47, 14]]),
+  P_('dirt', [[-39, 13], [-40.5, 20], [-40.5, 27], [-40, 30]]),
+  P_('dirt', [[4, 40], [-8, 39], [-18, 38], [-25, 37.5], [-33, 36], [-38, 34], [-40, 30]]), P_('dirt', [[-38, 34], [-43, 37], [-46, 41]]),
+  P_('dirt', [[6, -34], [-2, -37.5]]), P_('dirt', [[6, -34], [12, -36.5]]), P_('dirt', [[12, -36.5], [19, -37.5]]),
+  P_('dirt', [[6, -34], [14, -31], [15.5, -30.5]]), P_('dirt', [[14, -31], [17, -33], [24, -33.5], [25.8, -33.2]]), P_('dirt', [[24, -33.5], [27, -28], [29, -26.5]]),
+  P_('dirt', [[-8, -26], [0, -24], [4, -18]]),
+  P_('dirt', [[5, 12], [14, 10.5], [19.5, 10]]), P_('dirt', [[3, 2], [14, -3], [21, -1], [30, -1.5], [34.5, -1.5]]),
+  P_('blue', [[36, -3], [32, -9], [37.5, -18.5]]), P_('red', [[44.5, -18.5], [48, -9], [44, -3]]),
+  P_('red', [[44, 3], [49, 9], [46, 16], [42, 20.5]]), P_('blue', [[38, 20.5], [33, 16], [31, 9], [36, 3]]),
+  P_('dirt', [[48, -8], [52.5, -7]]), P_('dirt', [[49, 9], [52.5, 8.5]]), P_('dirt', [[46, 16], [47, 19]]),
+  P_('dirt', [[31, 9], [26, 16], [26, 21.5]]), P_('dirt', [[4, 40], [18, 39], [29, 37]]), P_('dirt', [[26, 16], [20, 10]]),
+];
+const PATH_COL = {
+  dirt: [new THREE.Color('#e6cd96'), new THREE.Color('#d8bd86')],
+  pink: [new THREE.Color('#f7bccb'), new THREE.Color('#eca5b8')],
+  red: [new THREE.Color('#f39a96'), new THREE.Color('#e88480')],
+  blue: [new THREE.Color('#a9c7f0'), new THREE.Color('#91b3e3')],
+};
+
+function segDist(px, pz, ax, az, bx, bz) {
+  const dx = bx - ax, dz = bz - az; const l = dx * dx + dz * dz;
+  const t = l ? clamp(((px - ax) * dx + (pz - az) * dz) / l, 0, 1) : 0;
+  const qx = ax + dx * t - px, qz = az + dz * t - pz; return Math.sqrt(qx * qx + qz * qz);
+}
+function polyDist(px, pz, pts) { let m = 1e9; for (let i = 0; i < pts.length - 1; i++) m = Math.min(m, segDist(px, pz, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])); return m; }
+function pathDist(x, z) { let m = 1e9; for (const p of PATHS) m = Math.min(m, polyDist(x, z, p.pts)); return m; }
+function pathNear(x, z) { let m = 1e9, t = 'dirt'; for (const p of PATHS) { const d = polyDist(x, z, p.pts); if (d < m - 0.05 || (d < m + 0.05 && p.type !== 'dirt')) { if (d < m) m = d; t = p.type; } } return [m, t]; }
+function coastR(x, z) { const th = Math.atan2(z, x); let r = 1; for (const [a, k, ph] of ISLAND.coast) r += a * Math.sin(k * th + ph); return r; }
+function islandD(x, z) { const p = 2.5; return Math.pow(Math.pow(Math.abs(x) / ISLAND.rx, p) + Math.pow(Math.abs(z) / ISLAND.rz, p), 1 / p) / coastR(x, z); }
+function profile(d) {
+  let h = 1.0;
+  h = lerp(h, 0.42, smooth(0.852, 0.872, d));
+  h = lerp(h, -0.3, smooth(0.93, 0.985, d));
+  h = lerp(h, -3.2, smooth(0.985, 1.16, d));
+  return h;
+}
+function bump(x, z) { return 0.07 * (Math.sin(x * 0.31) * Math.cos(z * 0.27) + Math.sin(x * 0.11 + z * 0.17)); }
+function plateauMask(x, z, d) {
+  const dp = Math.hypot(x - PL.x, z - PL.z) + 0.7 * Math.sin(Math.atan2(z - PL.z, x - PL.x) * 5 + 1);
+  let m = 1 - smooth(PL.r - 0.7, PL.r + 0.5, dp);
+  if (z > -19.5 && z < -7.5) { const rm = (1 - clamp((z + 17.5) / 9, 0, 1)) * (1 - smooth(2.6, 3.6, Math.abs(x + 42))); m = Math.max(m, rm); }
+  return m * (1 - smooth(0.80, 0.85, d));
+}
+function terrainRaw(x, z) {
+  const d = islandD(x, z);
+  let h = profile(d);
+  if (h > 0.95) h += bump(x, z) * smooth(0.95, 1.0, h);
+  // 小島與沙洲
+  const di = Math.hypot(x - ISLET.x, z - ISLET.z);
+  h = Math.max(h, profile(0.855 + (di - 4.6) * 0.038) + (di < 4.6 ? bump(x, z) : 0));
+  const ds = segDist(x, z, SANDBAR[0][0], SANDBAR[0][1], SANDBAR[1][0], SANDBAR[1][1]);
+  h = Math.max(h, lerp(0.36, -3, smooth(1.5, 4.2, ds)));
+  // 高地
+  const pm = plateauMask(x, z, d);
+  h += PL.h * pm;
+  // 高地上的泉水池
+  const dsp = segDist(x, z, SPRING.a[0], SPRING.a[1], SPRING.b[0], SPRING.b[1]);
+  if (pm > 0.5) h = lerp(h, Math.min(h, SPRING.y - 0.5), 1 - smooth(SPRING.r - 0.4, SPRING.r + 0.6, dsp));
+  // 河流與池塘
+  const dr = polyDist(x, z, RIVER);
+  h = lerp(h, Math.min(h, -0.75), 1 - smooth(1.9, 3.1, dr));
+  for (const po of PONDS) { const dpo = Math.hypot(x - po.x, z - po.z); h = lerp(h, Math.min(h, -0.7), 1 - smooth(po.r - 0.7, po.r + 0.6, dpo)); }
+  return h;
+}
+
+// 高度網格（之後查詢都用內插）
+const GRID = { min: -150, size: 300, n: 301 };
+const HF = new Float32Array(GRID.n * GRID.n);
+function terrainH(x, z) {
+  const fx = clamp(x - GRID.min, 0, GRID.size - 1.001), fz = clamp(z - GRID.min, 0, GRID.size - 1.001);
+  const ix = fx | 0, iz = fz | 0, tx = fx - ix, tz = fz - iz, n = GRID.n;
+  const a = HF[iz * n + ix], b = HF[iz * n + ix + 1], c = HF[(iz + 1) * n + ix], d = HF[(iz + 1) * n + ix + 1];
+  return lerp(lerp(a, b, tx), lerp(c, d, tx), tz);
+}
+function onBridge(x, z) {
+  for (const b of BRIDGES) {
+    const dx = x - b.x, dz = z - b.z, c = Math.cos(b.ang), s = Math.sin(b.ang);
+    const lx = dx * c - dz * s, lz = dx * s + dz * c;
+    if (Math.abs(lx) <= b.len / 2 && Math.abs(lz) <= b.w / 2 - 0.25) return b;
+  }
+  return null;
+}
+function onPier(x, z) { return Math.abs(x - PIER.x) <= PIER.w / 2 - 0.3 && z >= PIER.z0 - 1.5 && z <= PIER.z1 - 0.6; }
+function groundH(x, z) {
+  const h = terrainH(x, z);
+  const b = onBridge(x, z); if (b) return Math.max(h, b.y);
+  if (onPier(x, z)) return Math.max(h, PIER.y);
+  return h;
+}
+function slopeAt(x, z) { const e = 0.5; return Math.max(Math.abs(terrainH(x + e, z) - terrainH(x - e, z)), Math.abs(terrainH(x, z + e) - terrainH(x, z - e))) / (2 * e); }
+
+const TERRAIN_COL = {
+  sand: new THREE.Color('#f3e1ad'), wet: new THREE.Color('#ddc88f'), deep: new THREE.Color('#2b93ad'), mid: new THREE.Color('#5cc3c8'),
+  grassA: new THREE.Color('#97d56c'), grassB: new THREE.Color('#86c85f'), grassP: new THREE.Color('#8fd27a'),
+  cliff: new THREE.Color('#bf9467'), cliffD: new THREE.Color('#a77c55'), path: new THREE.Color('#e6cd96'), pathE: new THREE.Color('#d8bd86'),
+  townA: new THREE.Color('#a6dc79'),
+};
+const _c = new THREE.Color(), _c2 = new THREE.Color();
+function terrainColor(x, z, h, sl, out) {
+  if (h < -0.02) {
+    const t = smooth(-0.02, -2.6, h);
+    out.copy(TERRAIN_COL.sand).lerp(TERRAIN_COL.mid, Math.min(1, t * 1.6)).lerp(TERRAIN_COL.deep, smooth(0.45, 1, t));
+    return out;
+  }
+  if (sl > 0.75 && h > 0.6) {
+    const band = (h * 1.6) % 1;
+    out.copy(band < 0.32 ? TERRAIN_COL.cliffD : TERRAIN_COL.cliff);
+    return out;
+  }
+  if (h < 0.75) { out.copy(h < 0.28 ? TERRAIN_COL.wet : TERRAIN_COL.sand); return out; }
+  const n = 0.5 + 0.5 * Math.sin(x * 0.9 + Math.sin(z * 0.7) * 2) * Math.cos(z * 0.8 - x * 0.2);
+  out.copy(h > 2.5 ? TERRAIN_COL.grassP : TERRAIN_COL.grassA).lerp(TERRAIN_COL.grassB, n * 0.75);
+  const [pd, pt] = pathNear(x, z);
+  if (pd < 2.0) { const pc = PATH_COL[pt]; _c2.copy(pc[0]).lerp(pc[1], smooth(0.9, 1.6, pd)); out.lerp(_c2, 1 - smooth(1.25, 1.75, pd)); }
+  return out;
+}
+
+function buildTerrain() {
+  const n = GRID.n;
+  for (let iz = 0; iz < n; iz++) for (let ix = 0; ix < n; ix++) HF[iz * n + ix] = terrainRaw(GRID.min + ix, GRID.min + iz);
+  // 中央較細的網格做成地形網格
+  const R = 92, seg = 184;
+  const geo = new THREE.PlaneGeometry(R * 2, R * 2, seg, seg);
+  geo.rotateX(-Math.PI / 2);
+  const p = geo.attributes.position; const col = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i); const h = terrainH(x, z);
+    p.setY(i, h);
+    terrainColor(x, z, h, slopeAt(x, z), _c);
+    col[i * 3] = _c.r; col[i * 3 + 1] = _c.g; col[i * 3 + 2] = _c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, bendify(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GRAD })));
+  mesh.receiveShadow = true; scene.add(mesh);
+  // 外海海床
+  const outer = new THREE.Mesh(new THREE.PlaneGeometry(900, 900, 90, 90).rotateX(-Math.PI / 2), toon('#2a8fab'));
+  outer.position.y = -3.25; scene.add(outer);
+}
+
+// ---------- 水 ----------
+const animators = [];
+function buildWater() {
+  const sea = new THREE.Mesh(new THREE.PlaneGeometry(900, 900, 150, 150).rotateX(-Math.PI / 2), toon('#4cc6da', { transparent: true, opacity: 0.74 }));
+  sea.position.y = 0; sea.receiveShadow = true; sea.renderOrder = 2; scene.add(sea);
+  // 浪花環：沿著海岸線
+  const shore = (fn, cx, cz, rMax) => {
+    const pts = [];
+    for (let i = 0; i <= 240; i++) {
+      const th = i / 240 * Math.PI * 2; let lo = 0.5, hi = rMax;
+      for (let k = 0; k < 26; k++) { const m = (lo + hi) / 2; (fn(cx + Math.cos(th) * m, cz + Math.sin(th) * m) > 0.02 ? lo = m : hi = m); }
+      pts.push([cx + Math.cos(th) * lo, cz + Math.sin(th) * lo, th]);
+    }
+    return pts;
+  };
+  const ribbon = (pts, inner, outer, y, mat) => {
+    const pos = [], idx = [];
+    pts.forEach(([x, z, th], i) => {
+      const c = Math.cos(th), s = Math.sin(th);
+      pos.push(x - c * inner, y, z - s * inner, x + c * outer, y, z + s * outer);
+      if (i < pts.length - 1) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    });
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, mat); m.renderOrder = 3; scene.add(m); return m;
+  };
+  const mainFn = (x, z) => profile(islandD(x, z));
+  const isletFn = (x, z) => profile(0.855 + (Math.hypot(x - ISLET.x, z - ISLET.z) - 4.6) * 0.038);
+  for (const [fn, cx, cz, rm] of [[mainFn, 0, 0, 90], [isletFn, ISLET.x, ISLET.z, 14]]) {
+    const pts = shore(fn, cx, cz, rm);
+    const m1 = ribbon(pts, 0.25, 0.55, 0.03, basic('#ffffff', { transparent: true, opacity: 0.85, depthWrite: false }));
+    const m2 = ribbon(pts, -0.9, 1.6, 0.025, basic('#ffffff', { transparent: true, opacity: 0.3, depthWrite: false }));
+    animators.push((t) => {
+      m1.material.opacity = 0.55 + 0.3 * Math.sin(t * 1.3);
+      const s = (t * 0.35) % 1; m2.material.opacity = 0.35 * (1 - s); m2.scale.setScalar(1 + s * 0.012);
+      m2.position.set(-cx * s * 0.012, 0, -cz * s * 0.012);
+    });
+  }
+  // 高地泉水池＋瀑布
+  const sp = new THREE.Shape(); const L = Math.hypot(SPRING.b[0] - SPRING.a[0], SPRING.b[1] - SPRING.a[1]);
+  sp.absarc(0, 0, SPRING.r + 0.35, Math.PI / 2, Math.PI * 1.5, false); sp.absarc(L, 0, SPRING.r + 0.35, -Math.PI / 2, Math.PI / 2, false);
+  const sg = new THREE.ShapeGeometry(sp, 12); sg.rotateX(-Math.PI / 2);
+  const spring = new THREE.Mesh(sg, toon('#56cbe0', { transparent: true, opacity: 0.85 }));
+  spring.position.set(SPRING.a[0], SPRING.y, SPRING.a[1]); spring.rotation.y = -Math.atan2(SPRING.b[1] - SPRING.a[1], SPRING.b[0] - SPRING.a[0]); scene.add(spring);
+  const fallTex = canvasTex(64, 256, (x, w, h) => {
+    x.fillStyle = '#7fd6ea'; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(255,255,255,${0.35 + rand() * 0.5})`; x.fillRect(rand() * w, rand() * h, 3 + rand() * 6, 18 + rand() * 40); }
+  });
+  fallTex.wrapS = fallTex.wrapT = THREE.RepeatWrapping;
+  const fall = new THREE.Mesh(new THREE.PlaneGeometry(2.6, SPRING.y + 0.4, 1, 8), basic('#ffffff', { map: fallTex, transparent: true, opacity: 0.92 }));
+  fall.position.set(-22.4, (SPRING.y - 0.4) / 2, -27.6); fall.rotation.y = Math.PI / 2 - 0.08; scene.add(fall);
+  const splash = new THREE.Group(); splash.position.set(-21.7, 0.05, -27.5); scene.add(splash);
+  for (let i = 0; i < 6; i++) add(splash, G.sph(0.45 + rand() * 0.3, 10, 8), basic('#ffffff', { transparent: true, opacity: 0.8 }), (rand() - 0.5) * 2, 0, (rand() - 0.5) * 2.2, { sc: [1, 0.5, 1], cast: false });
+  animators.push((t) => { fallTex.offset.y = (t * 1.4) % 1; splash.children.forEach((m, i) => m.scale.set(1 + 0.15 * Math.sin(t * 6 + i), 0.5, 1 + 0.15 * Math.cos(t * 5 + i))); });
+}
+
+// ---------- 橋、碼頭、細胞膜圍籬、細胞壁 ----------
+function buildStructures() {
+  const wood = '#c9965f', woodD = '#a8784a';
+  for (const b of BRIDGES) {
+    const g = new THREE.Group(); g.position.set(b.x, b.y, b.z); g.rotation.y = -b.ang; scene.add(g);
+    for (let i = 0; i < 9; i++) add(g, G.rbox(0.82, 0.22, b.w, 0.06), i % 2 ? wood : '#d4a46c', -b.len / 2 + 0.45 + i * (b.len - 0.9) / 8, -0.1, 0);
+    for (const s of [-1, 1]) {
+      add(g, G.rbox(b.len, 0.18, 0.2, 0.06), woodD, 0, 0.75, s * (b.w / 2 - 0.1));
+      for (let i = 0; i < 5; i++) add(g, G.cyl(0.11, 0.13, 1.1, 8), woodD, -b.len / 2 + 0.4 + i * (b.len - 0.8) / 4, 0.25, s * (b.w / 2 - 0.1));
+    }
+  }
+  const pier = new THREE.Group(); pier.position.set(PIER.x, PIER.y, 0); scene.add(pier);
+  const n = Math.round((PIER.z1 - PIER.z0) / 0.9);
+  for (let i = 0; i < n; i++) add(pier, G.rbox(PIER.w, 0.22, 0.82, 0.06), i % 2 ? wood : '#d4a46c', 0, -0.1, PIER.z0 + 0.45 + i * 0.9);
+  for (let i = 0; i < 6; i++) for (const s of [-1, 1]) add(pier, G.cyl(0.16, 0.18, 3.4, 10), woodD, s * (PIER.w / 2 + 0.05), -1.4, PIER.z0 + 1 + i * (PIER.z1 - PIER.z0 - 1.5) / 5);
+  // 小船（原創）
+  const boat = new THREE.Group(); boat.position.set(PIER.x + 3.4, 0.2, PIER.z1 - 2); scene.add(boat);
+  add(boat, G.cap(0.9, 2.6), '#f4f0e4', 0, 0, 0, { rx: Math.PI / 2, sc: [1, 1, 0.55] });
+  add(boat, G.cap(0.95, 2.7), '#e46a52', 0, -0.1, 0, { rx: Math.PI / 2, sc: [1.02, 1, 0.42] });
+  add(boat, G.cyl(0.07, 0.07, 2.8, 6), woodD, 0, 1.4, 0);
+  add(boat, G.plane(1.5, 1.8), toon('#fff6dc', { side: THREE.DoubleSide }), 0.75, 1.7, 0, { ry: Math.PI / 2 });
+  animators.push((t) => { boat.position.y = 0.15 + Math.sin(t * 1.2) * 0.08; boat.rotation.z = Math.sin(t * 0.9) * 0.04; });
+
+}
+function gateArch(g, half, label) {
+  for (const s of [-1, 1]) add(g, G.cap(0.42, 2.2), '#9b7ad8', s * half, 1.5, 0);
+  add(g, G.tor(half, 0.3, Math.PI, 24), '#b89cf0', 0, 2.75, 0);
+  if (label) {
+    const t = textTex(label, { w: 384, h: 120, size: 60, bg: '#fff4dc', border: '#9b7ad8' });
+    add(g, G.plane(2.3, 0.72), texMat(t), 0, 4.3, 0.33, { cast: false });
+    add(g, G.plane(2.3, 0.72), texMat(t), 0, 4.3, -0.33, { ry: Math.PI, cast: false });
+    add(g, G.rbox(2.5, 0.9, 0.5, 0.15), '#b89cf0', 0, 4.3, 0);
+  }
+}
+
+// ================= 建築與角色 =================
+const PAL = { cream: '#fff3dc', peach: '#ffe0cf', sky: '#dcefff', lav: '#ebe0fb', mint: '#e1f4dc', pink: '#ffe3ea',
+  coral: '#e2705a', blue: '#5b9bd5', green: '#6cbf5a', purple: '#9b7ad8', mustard: '#f0b64a', brick: '#c96a4a', teal: '#3fae8c',
+  wood: '#c9965f', woodD: '#9c6e45', ink: '#4b3a2e', stone: '#d6d1c4', glass: '#bdeff6' };
+
+function wallSign(g, text, x, y, z, w = 2.6, color = PAL.wood) {
+  const t = textTex(text, { w: 512, h: 150, size: 62, bg: '#fff4d8', border: color });
+  add(g, G.rbox(w + 0.2, w * 0.3 + 0.18, 0.16, 0.06), color, x, y, z - 0.02);
+  add(g, G.plane(w, w * 0.3), texMat(t), x, y, z + 0.07, { cast: false });
+}
+function postSign(g, text, x, z, { w = 2.2, h = 1.6, ry = 0, color = PAL.wood } = {}) {
+  const s = new THREE.Group(); s.position.set(x, 0, z); s.rotation.y = ry; g.add(s);
+  add(s, G.cyl(0.09, 0.11, h, 8), PAL.woodD, 0, h / 2, 0);
+  const t = textTex(text, { w: 512, h: 170, size: 64, bg: '#fff4d8', border: color });
+  add(s, G.rbox(w + 0.16, w * 0.33 + 0.16, 0.14, 0.05), color, 0, h + 0.1, 0);
+  add(s, G.plane(w, w * 0.33), texMat(t), 0, h + 0.1, 0.08, { cast: false });
+  add(s, G.plane(w, w * 0.33), texMat(t), 0, h + 0.1, -0.08, { ry: Math.PI, cast: false });
+  return s;
+}
+function plinth(g, w, d, color = '#d9c7a6') { add(g, G.rbox(w, 2.2, d, 0.2), color, 0, -0.8, 0); }
+function house(g, { w = 5, d = 4, h = 2.8, wall = PAL.cream, roof = PAL.coral, roofH = 1.8, roofType = 'gable', door = '#8a5a3b', win = true, sign = null, signColor = PAL.wood, y0 = 0.3 }) {
+  plinth(g, w + 0.6, d + 0.6);
+  add(g, G.rbox(w, h, d, 0.3), wall, 0, y0 + h / 2, 0);
+  const top = y0 + h;
+  if (roofType === 'gable') {
+    const sh = new THREE.Shape(); sh.moveTo(-(w / 2 + 0.5), 0); sh.lineTo(w / 2 + 0.5, 0); sh.lineTo(0, roofH); sh.closePath();
+    const geo = cached(`gab${w},${d},${roofH}`, () => { const q = new THREE.ExtrudeGeometry(sh, { depth: d + 0.6, bevelEnabled: true, bevelThickness: 0.14, bevelSize: 0.14, bevelSegments: 3 }); q.translate(0, 0, -(d + 0.6) / 2); return q; });
+    add(g, geo, roof, 0, top, 0);
+  } else if (roofType === 'hip') {
+    const geo = cached(`hip${w},${d},${roofH}`, () => { const q = new THREE.ConeGeometry(0.72, 1, 4); q.rotateY(Math.PI / 4); q.scale(w + 0.9, roofH, d + 0.9); return q; });
+    add(g, geo, roof, 0, top + roofH / 2, 0);
+  } else if (roofType === 'flat') {
+    add(g, G.rbox(w + 0.5, 0.4, d + 0.5, 0.15), roof, 0, top + 0.2, 0);
+  }
+  add(g, G.rbox(1.1, 1.7, 0.24, 0.12), door, 0, y0 + 0.85, d / 2 + 0.02);
+  add(g, G.sph(0.08, 8, 6), '#f3c64f', 0.32, y0 + 0.85, d / 2 + 0.16);
+  if (win) for (const s of [-1, 1]) {
+    add(g, G.rbox(0.95, 0.9, 0.16, 0.12), '#fff6cf', s * Math.min(w * 0.31, w / 2 - 0.8), y0 + h * 0.58, d / 2 + 0.03);
+    add(g, G.box(0.08, 0.86, 0.06), '#ffffff', s * Math.min(w * 0.31, w / 2 - 0.8), y0 + h * 0.58, d / 2 + 0.12, { cast: false });
+  }
+  if (sign) wallSign(g, sign, 0, y0 + Math.min(h - 0.35, 2.35), d / 2 + 0.06, Math.min(w - 0.4, 3.4), signColor);
+  return top + (roofType === 'flat' ? 0.4 : roofH);
+}
+function microscope(g, x, y, z, s = 1, ry = 0) {
+  const m = new THREE.Group(); m.position.set(x, y, z); m.scale.setScalar(s); m.rotation.y = ry; g.add(m);
+  add(m, G.rbox(1.6, 0.35, 2.0, 0.12), '#4f6fa8', 0, 0.18, 0);
+  add(m, G.rbox(0.42, 2.4, 0.5, 0.12), '#f4f2ea', 0, 1.4, -0.65);
+  add(m, G.rbox(1.3, 0.14, 1.1, 0.05), '#3d3d48', 0, 1.15, 0.15);
+  add(m, G.cyl(0.32, 0.32, 1.9, 16), '#f4f2ea', 0, 2.35, 0.05, { rx: 0.42 });
+  add(m, G.cyl(0.24, 0.28, 0.5, 14), '#4f6fa8', 0, 3.25, -0.36, { rx: 0.42 });
+  add(m, G.cyl(0.22, 0.12, 0.45, 12), '#9aa3b3', 0, 1.5, 0.48, { rx: 0.42 });
+  add(m, G.sph(0.2, 10, 8), '#9ad7ef', 0, 1.3, 0.15, { sc: [1, 0.3, 1] });
+  add(m, G.tor(0.38, 0.1, Math.PI, 12), '#f4f2ea', 0, 2.0, -0.4, { ry: Math.PI / 2, rz: Math.PI / 2 });
+  return m;
+}
+function makeX(color, s = 1, joint = '#ffd25a') {
+  const g = new THREE.Group(); g.scale.setScalar(s);
+  for (const a of [-0.42, 0.42]) add(g, G.cap(0.2, 1.2, 10), color, 0, 0, 0, { rz: a });
+  add(g, G.sph(0.24, 12, 10), joint, 0, 0, 0);
+  return g;
+}
+function face(g, y, z, s = 1, spread = 0.18) {
+  for (const sx of [-1, 1]) {
+    add(g, G.sph(0.075 * s, 10, 8), '#2f2622', sx * spread * s, y, z, { cast: false });
+    add(g, G.sph(0.028 * s, 6, 5), '#ffffff', sx * spread * s + 0.025 * s, y + 0.035 * s, z + 0.05 * s, { cast: false });
+    add(g, G.sph(0.07 * s, 8, 6), '#ff9fa8', sx * (spread + 0.12) * s, y - 0.12 * s, z - 0.02, { sc: [1, 0.55, 0.4], cast: false });
+  }
+}
+function bob(obj, amp = 0.08, sp = 2, ph = rand() * 6) { const y0 = obj.position.y; animators.push((t) => { if (!REDUCED) obj.position.y = y0 + Math.sin(t * sp + ph) * amp; }); }
+
+const GLASS = (c = '#d8f6ff', o = 0.45) => toon(c, { transparent: true, opacity: o });
+function tube(g, x, y, z, h, liquid, lh = 0.5) {
+  add(g, G.cyl(0.12, 0.12, h, 12), GLASS(), x, y + h / 2, z, { cast: false });
+  if (liquid) add(g, G.cyl(0.1, 0.1, h * lh, 10), liquid, x, y + h * lh / 2 + 0.02, z, { cast: false });
+}
+function lamp(g, x, y, z) {
+  add(g, G.cyl(0.22, 0.28, 0.35, 12), GLASS('#e8f6ff', 0.7), x, y + 0.18, z);
+  const f = add(g, G.cone(0.08, 0.28, 8), basic('#ffb347'), x, y + 0.5, z, { cast: false });
+  animators.push((t) => { f.scale.set(1, 0.85 + 0.25 * Math.sin(t * 13 + x), 1); });
+}
+function table(g, x, z, w = 2.2, d = 1.1, h = 0.85, c = PAL.wood) {
+  add(g, G.rbox(w, 0.14, d, 0.05), c, x, h, z);
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) add(g, G.cyl(0.06, 0.06, h, 6), PAL.woodD, x + sx * (w / 2 - 0.12), h / 2, z + sz * (d / 2 - 0.12));
+  return h + 0.07;
+}
+function bubbles(g, n, fn) {
+  const list = []; for (let i = 0; i < n; i++) list.push(fn(i));
+  return list;
+}
+function stallProps(s, kind) {
+  if (kind === 'sugar') { for (let k = 0; k < 3; k++) add(s, G.rbox(0.28, 0.28, 0.28, 0.05), '#ffffff', -0.55 + k * 0.3, 1.1, -0.1); add(s, G.hemi(0.32), '#ffffff', 0.5, 0.95, 0, { sc: [1, 0.8, 1] }); add(s, G.cyl(0.36, 0.26, 0.2, 14), '#c96a4a', 0.5, 0.92, 0); }
+  if (kind === 'protein') { add(s, G.sph(0.2, 12, 10), '#fff6e0', -0.45, 1.12, 0, { sc: [0.8, 1.05, 0.8] }); add(s, G.cap(0.18, 0.35, 10), '#b9673a', 0.35, 1.12, 0, { rz: 1.2 }); add(s, G.cyl(0.05, 0.05, 0.3, 6), '#fff6e0', 0.68, 1.22, 0, { rz: 1.2 }); }
+  if (kind === 'lipid') { add(s, G.rbox(0.6, 0.3, 0.4, 0.06), '#ffe680', -0.35, 1.12, 0); add(s, G.cyl(0.14, 0.14, 0.5, 10), '#f6d55c', 0.45, 1.2, 0); add(s, G.cyl(0.05, 0.05, 0.2, 6), '#f6d55c', 0.45, 1.55, 0); }
+  if (kind === 'water') for (let k = 0; k < 3; k++) { add(s, G.cyl(0.18, 0.2, 0.55, 12), GLASS('#8fd6f5', 0.75), -0.5 + k * 0.5, 1.25, 0); add(s, G.cyl(0.08, 0.08, 0.1, 8), '#3f87d6', -0.5 + k * 0.5, 1.58, 0); }
+  if (kind === 'mineral') { add(s, G.cap(0.07, 0.6, 8), '#fbf7ee', -0.3, 1.1, 0, { rz: Math.PI / 2 }); for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(s, G.sph(0.09, 8, 6), '#fbf7ee', -0.3 + sx * 0.38, 1.1, sz * 0.07); for (let k = 0; k < 3; k++) add(s, cached('oct2', () => new THREE.OctahedronGeometry(0.16)), ['#c9d3dc', '#d9b8e8', '#a8b4bf'][k], 0.35 + k * 0.18, 1.15, (k - 1) * 0.12); }
+  if (kind === 'vitamin') { for (let k = 0; k < 3; k++) add(s, G.sph(0.17, 12, 10), '#f6a23b', -0.55 + k * 0.32, 1.12, 0); add(s, G.cone(0.1, 0.55, 8), '#f08a2e', 0.5, 1.1, 0, { rz: Math.PI / 2 + 0.3 }); add(s, G.cone(0.08, 0.2, 6), '#5fb35a', 0.8, 1.2, 0, { rz: -Math.PI / 2 }); }
+}
+const BUILD = {
+  willow(g, poi) {
+    add(g, G.cyl(1.9, 1.35, 1.7, 22), '#d77a4a', 0, 0.85, 0);
+    add(g, G.tor(1.9, 0.18, Math.PI * 2, 30), '#e08a5a', 0, 1.7, 0, { rx: Math.PI / 2 });
+    add(g, G.cyl(1.75, 1.75, 0.1, 22), '#6e4a30', 0, 1.6, 0);
+    add(g, G.cyl(0.25, 0.38, 2.6, 10), '#9c7048', 0, 2.9, 0);
+    add(g, G.sph(1.6, 18, 14), '#a6d47f', 0, 4.4, 0, { sc: [1, 0.75, 1] });
+    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; const l = 1.2 + rand() * 0.8; add(g, G.cyl(0.05, 0.03, l, 5), '#8cc46a', Math.cos(a) * 1.45, 4.1 - l / 2, Math.sin(a) * 1.45, { cast: false }); }
+    const sc = new THREE.Group(); sc.position.set(3.1, 0, 0.6); g.add(sc);
+    add(sc, G.cyl(0.4, 0.5, 0.3, 14), '#8a8f9a', 0, 0.15, 0);
+    add(sc, G.cyl(0.07, 0.07, 1.4, 8), '#8a8f9a', 0, 1.0, 0);
+    add(sc, G.box(2.0, 0.08, 0.08), '#8a8f9a', 0, 1.7, 0, { rz: 0.08 });
+    for (const s of [-1, 1]) add(sc, G.cyl(0.42, 0.3, 0.12, 14), '#c4c8d0', s * 0.95, 1.3 - s * 0.08, 0);
+    if (poi.willowSign) postSign(g, poi.willowSign, -3.0, 0.8, { w: 2.0, h: 1.0 });
+    return 5.6;
+  },
+  stalls(g, poi) {
+    poi.stalls.forEach(([name, c, kind], i) => {
+      const x = -2.7 + i * 2.7, z = Math.abs(i - 1) * -0.5;
+      const s = new THREE.Group(); s.position.set(x, 0, z); s.rotation.y = (1 - i) * 0.25; g.add(s);
+      add(s, G.rbox(2.0, 0.95, 1.1, 0.12), PAL.cream, 0, 0.48, 0);
+      for (const sx of [-1, 1]) add(s, G.cyl(0.05, 0.05, 2.0, 6), PAL.woodD, sx * 0.92, 1.0, 0.5);
+      const stripe = canvasTex(128, 64, (x2, w, h) => { for (let k = 0; k < 8; k++) { x2.fillStyle = k % 2 ? '#ffffff' : c; x2.fillRect(k * 16, 0, 16, h); } });
+      add(s, G.rbox(2.3, 0.18, 1.4, 0.06), texMat(stripe), 0, 2.05, 0.15, { rx: 0.2 });
+      add(s, G.plane(1.5, 0.48), texMat(textTex(name, { w: 320, h: 104, size: 56, bg: '#fff9ea', border: c })), 0, 1.5, 0.56, { cast: false });
+      stallProps(s, kind);
+    });
+    return 2.9;
+  },
+  testLab(g) {
+    const top = house(g, { w: 4.6, d: 3.6, h: 2.7, wall: '#fff4dc', roof: PAL.mustard, roofH: 1.5, sign: '測定站', signColor: '#d39b2a' });
+    const ty = table(g, 3.4, 1.4, 2.0, 1.0);
+    add(g, G.rbox(1.3, 0.12, 0.4, 0.04), PAL.woodD, 3.4, ty + 0.06, 1.3);
+    ['#9fd5ff', '#9be37a', '#f3e25a', '#f2a541', '#e2574c'].forEach((c, i) => tube(g, 2.9 + i * 0.25, ty + 0.1, 1.3, 0.6, c, 0.55));
+    add(g, G.cyl(0.32, 0.32, 0.06, 18), GLASS(), 3.9, ty + 0.03, 1.7);
+    add(g, G.sph(0.2, 10, 8), '#3d3a7a', 3.9, ty + 0.06, 1.7, { sc: [1, 0.3, 1] });
+    add(g, G.cyl(0.12, 0.14, 0.32, 10), '#8a5a2b', 2.7, ty + 0.16, 1.75);
+    lamp(g, -3.3, 0, 1.6);
+    for (let k = 0; k < 3; k++) { const a = k / 3 * Math.PI * 2; add(g, G.cyl(0.03, 0.03, 1.0, 5), '#5a5a62', -3.3 + Math.cos(a) * 0.35, 0.5, 1.6 + Math.sin(a) * 0.35); }
+    add(g, G.rbox(0.9, 0.04, 0.9, 0.02), '#d8d0c2', -3.3, 1.0, 1.6);
+    add(g, G.cyl(0.3, 0.3, 0.55, 14), GLASS('#bfe8ff', 0.6), -3.3, 1.3, 1.6);
+    return top;
+  },
+  funnel(g) {
+    plinth(g, 4.4, 4.4, '#e9dcb4');
+    add(g, G.cyl(1.6, 1.6, 2.2, 28), GLASS('#bfe8ff', 0.35), 0, 1.4, 0, { cast: false });
+    add(g, G.cyl(1.52, 1.52, 1.6, 28), toon('#8fd6f5', { transparent: true, opacity: 0.4 }), 0, 1.1, 0, { cast: false });
+    add(g, G.cone(1.0, 1.4, 24), GLASS('#ffffff', 0.5), 0, 1.42, 0, { cast: false });
+    add(g, G.cyl(0.98, 0.98, 0.05, 24), '#f3e6c4', 0, 0.72, 0, { cast: false });
+    const neck = add(g, G.cyl(0.14, 0.14, 2.6, 10), GLASS('#ffffff', 0.5), 0, 3.4, 0, { cast: false });
+    const lvl = add(g, G.cyl(0.11, 0.11, 1, 10), '#8fd6f5', 0, 2.2, 0, { cast: false });
+    for (let k = 0; k < 4; k++) add(g, G.sph(0.18, 10, 8), '#9b7ad8', (k % 2 - 0.5) * 0.4, 1.0 + (k >> 1) * 0.3, 0.1, { cast: false });
+    const small = bubbles(g, 6, () => add(g, G.sph(0.09, 8, 6), '#ffd84d', 0, 0, 0, { cast: false }));
+    animators.push((t) => {
+      small.forEach((m, i) => { const p = (t * 0.25 + i / 6) % 1; const a = i * 1.7; const r = 0.3 + p * 1.0; m.position.set(Math.cos(a) * r, 1.2 - p * 0.7, Math.sin(a) * r); });
+      const h = 0.6 + ((t * 0.05) % 1) * 1.4; lvl.scale.y = h; lvl.position.y = 2.1 + h / 2;
+    });
+    for (const s of [-1, 1]) add(g, G.cyl(0.06, 0.06, 4.2, 6), '#7d7d86', s * 1.9, 2.1, -0.6);
+    add(g, G.box(4.0, 0.08, 0.08), '#7d7d86', 0, 4.2, -0.6);
+    postSign(g, '半透膜', 2.6, 1.8, { w: 1.5, h: 1.0 });
+    return 5;
+  },
+  hotSpring(g) {
+    for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; add(g, G.rbox(1.0, 0.7, 0.8, 0.28), ['#c9c4b6', '#b5b0a2', '#d6d1c4'][i % 3], Math.cos(a) * 3.7, 0.25, Math.sin(a) * 3.7, { ry: -a }); }
+    const wy = -g.position.y;
+    add(g, G.cyl(3.2, 3.2, 0.04, 32), toon('#9fe7e0', { transparent: true, opacity: 0.55 }), 0, wy + 0.05, 0, { cast: false });
+    const steam = bubbles(g, 10, () => add(g, G.sph(0.45, 10, 8), basic('#ffffff', { transparent: true, opacity: 0.6 }), 0, 0, 0, { cast: false }));
+    animators.push((t) => steam.forEach((m, i) => { const p = (t * 0.22 + i / 10) % 1; const a = i * 2.3; m.position.set(Math.cos(a) * (1 + (i % 3) * 0.7), wy + 0.3 + p * 3.2, Math.sin(a) * (1 + (i % 3) * 0.7)); m.scale.setScalar(0.6 + p * 1.2); m.material.opacity = 0.55 * (1 - p); }));
+    const th = new THREE.Group(); th.position.set(-3.6, 0, 2.6); g.add(th);
+    add(th, G.cap(0.28, 2.2, 10), '#ffffff', 0, 1.6, 0);
+    add(th, G.cyl(0.1, 0.1, 1.6, 8), '#e2574c', 0, 1.4, 0.2, { cast: false });
+    add(th, G.sph(0.3, 12, 10), '#e2574c', 0, 0.45, 0.1);
+    add(th, G.plane(1.0, 0.4), texMat(textTex('37℃', { w: 200, h: 80, size: 54 })), 0, 3.15, 0.2, { cast: false });
+    [['胃：酸性', '#e2574c'], ['唾液：中性', '#6cbf5a'], ['小腸：鹼性', '#3f87d6']].forEach(([t2, c], i) => postSign(g, t2, 1.2 + i * 1.6, 4.4, { w: 1.4, h: 0.9, color: c }));
+    return 3.6;
+  },
+  metabFactory(g) {
+    const top = house(g, { w: 5.2, d: 3.8, h: 2.8, wall: '#efe6fb', roof: '#8a68cf', roofType: 'flat', sign: '代謝作用工廠', signColor: '#8a68cf' });
+    add(g, G.cyl(0.35, 0.42, 1.6, 12), '#b39ad8', 1.6, top + 0.8, -0.6);
+    add(g, G.rbox(6.0, 0.35, 0.9, 0.12), '#5a5a62', 0, 0.55, 2.6);
+    for (let k = 0; k < 4; k++) add(g, G.cyl(0.08, 0.08, 0.5, 6), '#5a5a62', -2.6 + k * 1.75, 0.25, 2.6);
+    const beads = bubbles(g, 12, (i) => add(g, G.sph(0.17, 10, 8), i % 2 ? '#ffd84d' : '#f2a541', 0, 0, 0));
+    animators.push((t) => beads.forEach((m, i) => { const p = (t * 0.12 + i / 12) % 1; const x = -2.8 + p * 5.6; const chain = p > 0.5; m.position.set(x, 0.92 + (chain ? Math.sin(i) * 0.04 : 0), 2.6 + (chain ? 0 : Math.sin(i * 2.1) * 0.25)); }));
+    add(g, G.plane(1.6, 0.5), texMat(textTex('合成 →', { w: 300, h: 90, size: 52 })), -1.6, 1.35, 3.08, { cast: false });
+    add(g, G.plane(1.6, 0.5), texMat(textTex('← 分解', { w: 300, h: 90, size: 52 })), 1.6, 1.35, 3.08, { cast: false });
+    for (const s of [-1, 1]) add(g, G.cyl(0.05, 0.05, 1.0, 6), PAL.woodD, s * 1.6, 0.75, 3.05);
+    return top + 1.6;
+  },
+  lockKey(g) {
+    const top = house(g, { w: 4.4, d: 3.6, h: 2.7, wall: '#f4ecff', roof: '#8a68cf', roofH: 1.6, sign: '鑰匙屋', signColor: '#8a68cf' });
+    const e = new THREE.Group(); e.position.set(3.3, 0, 1.6); g.add(e);
+    add(e, G.cyl(0.6, 0.7, 0.4, 16), PAL.stone, 0, 0.2, 0);
+    add(e, G.rbox(0.7, 1.4, 0.8, 0.22), '#9b7ad8', -0.55, 1.1, 0);
+    add(e, G.rbox(0.7, 1.4, 0.8, 0.22), '#9b7ad8', 0.55, 1.1, 0);
+    add(e, G.rbox(1.8, 0.6, 0.8, 0.22), '#9b7ad8', 0, 0.65, 0);
+    const sub = new THREE.Group(); e.add(sub);
+    const a = add(sub, G.rbox(0.38, 0.5, 0.6, 0.1), '#f2a541', -0.2, 0, 0), b = add(sub, G.rbox(0.38, 0.5, 0.6, 0.1), '#f2a541', 0.2, 0, 0);
+    animators.push((t) => {
+      const p = REDUCED ? 0.5 : (t * 0.3) % 1;
+      const y = p < 0.35 ? 3.0 - p / 0.35 * 1.45 : 1.55; const split = smooth(0.55, 0.9, p);
+      sub.position.y = y + split * 0.8; a.position.x = -0.2 - split * 0.9; b.position.x = 0.2 + split * 0.9;
+      a.rotation.z = split * 0.6; b.rotation.z = -split * 0.6;
+    });
+    postSign(g, '專一性', 3.3, 3.2, { w: 1.3, h: 0.9, color: '#8a68cf' });
+    return top;
+  },
+  salivaLab(g) {
+    const top = house(g, { w: 4.2, d: 3.4, h: 2.6, wall: '#f4ecff', roof: '#b39ad8', roofH: 1.4, sign: '唾液實驗室', signColor: '#8a68cf' });
+    const ty = table(g, -3.3, 1.2, 2.0, 1.1);
+    add(g, G.rbox(1.0, 0.5, 0.7, 0.08), '#ffffff', -3.6, ty + 0.25, 1.2);
+    add(g, G.box(0.9, 0.04, 0.6), toon('#9fd5ff', { transparent: true, opacity: 0.8 }), -3.6, ty + 0.46, 1.2, { cast: false });
+    tube(g, -3.8, ty + 0.2, 1.2, 0.6, '#f3e6c4'); tube(g, -3.45, ty + 0.2, 1.2, 0.6, '#f3e6c4');
+    add(g, G.plane(0.7, 0.3), texMat(textTex('37℃', { w: 160, h: 70, size: 44 })), -3.6, ty + 0.5, 1.56, { cast: false });
+    lamp(g, -2.6, ty, 1.2);
+    add(g, G.cyl(0.26, 0.26, 0.45, 14), GLASS('#bfe8ff', 0.6), -2.6, ty + 0.95, 1.2);
+    const bub = bubbles(g, 5, () => add(g, G.sph(0.05, 6, 5), '#ffffff', 0, 0, 0, { cast: false }));
+    animators.push((t) => bub.forEach((m, i) => { const p = (t * 1.2 + i / 5) % 1; m.position.set(-2.6 + Math.sin(i * 2) * 0.12, ty + 0.75 + p * 0.38, 1.2 + Math.cos(i * 3) * 0.12); }));
+    for (let k = 0; k < 3; k++) { const a2 = k / 3 * Math.PI * 2; add(g, G.cyl(0.025, 0.025, 0.5, 5), '#5a5a62', -2.6 + Math.cos(a2) * 0.25, ty + 0.25, 1.2 + Math.sin(a2) * 0.25); }
+    return top;
+  },
+  pyramid(g) {
+    plinth(g, 5.4, 5.4, '#e9d6a8');
+    const pg = cached('pyr', () => { const q = new THREE.ConeGeometry(2.9, 3.4, 4); q.rotateY(Math.PI / 4); return q; });
+    add(g, pg, '#e8c27a', 0, 2.0, 0);
+    add(g, G.rbox(1.0, 1.4, 0.4, 0.12), '#8a5a3b', 0, 1.0, 1.55);
+    wallSign(g, '1879 enzyme', 0, 2.0, 1.25, 1.6, '#c9963f');
+    const ty = table(g, 3.0, 1.6, 1.6, 0.9);
+    for (let k = 0; k < 3; k++) add(g, G.sph(0.24, 12, 10), '#d99a52', 2.5 + k * 0.5, ty + 0.12, 1.6, { sc: [1.2, 0.6, 1] });
+    for (let k = 0; k < 2; k++) add(g, G.rbox(0.55, 0.65, 0.5, 0.2), '#e9d6a8', -2.9 + k * 0.7, 0.33, 2.0);
+    return 4.2;
+  },
+  leafModel(g) {
+    add(g, G.rbox(7.0, 0.6, 3.8, 0.2), PAL.stone, 0, 0.3, 0);
+    const y0 = 0.6, W = 6.4, D = 3.0;
+    add(g, G.rbox(W, 0.18, D, 0.06), '#d9f0b0', 0, y0 + 0.09, 0);
+    for (let i = 0; i < 9; i++) add(g, G.rbox(0.66, 0.4, D * 0.95, 0.12), '#e8f6d8', -W / 2 + 0.36 + i * 0.71, y0 + 0.4, 0);
+    for (let i = 0; i < 4; i++) { const x = -2.5 + i * 1.6; add(g, G.sph(0.42, 14, 10), '#7cc66e', x, y0 + 1.1, 0, { sc: [1, 0.7, 2.6] }); add(g, G.sph(0.15, 8, 6), '#3f8d44', x + 0.2, y0 + 1.1, 0.6); }
+    const vy = y0 + 1.15;
+    add(g, G.cyl(0.62, 0.62, D * 0.98, 20), '#c9b6e8', 2.7, vy, 0, { rx: Math.PI / 2 });
+    add(g, G.cyl(0.34, 0.34, D * 1.0, 16, ), '#5b9bd5', 2.7, vy + 0.18, 0, { rx: Math.PI / 2 });
+    add(g, G.cyl(0.3, 0.3, D * 1.0, 16), '#e2574c', 2.7, vy - 0.24, 0, { rx: Math.PI / 2 });
+    for (let i = 0; i < 9; i++) if (i !== 4) add(g, G.rbox(0.66, 0.4, D * 0.95, 0.12), '#e8f6d8', -W / 2 + 0.36 + i * 0.71, y0 + 1.85, 0);
+    for (const s of [-1, 1]) add(g, G.cap(0.16, 0.55, 8), '#5fb35a', s * 0.27 - W / 2 + 0.36 + 4 * 0.71, y0 + 1.85, 0, { rx: Math.PI / 2 });
+    add(g, G.rbox(W, 0.18, D, 0.06), '#d9f0b0', 0, y0 + 2.25, 0);
+    [['角質層', 2.5], ['上表皮', 2.05], ['葉肉', 1.25], ['下表皮・氣孔', 0.55]].forEach(([t2, y], i) => add(g, G.plane(1.3, 0.38), texMat(textTex(t2, { w: 300, h: 88, size: 46 })), -W / 2 - 0.2, y0 + y - 0.2 + (i === 0 ? 0.3 : 0), D / 2 + 0.12, { cast: false }));
+    add(g, G.plane(1.2, 0.38), texMat(textTex('葉脈', { w: 260, h: 88, size: 50 })), 2.7, vy + 0.95, D / 2 + 0.15, { cast: false });
+    postSign(g, '葉片構造模型', -3.0, 2.8, { w: 2.0, h: 0.9, color: '#5aa83c' });
+    return 3.6;
+  },
+  photoFactory(g) {
+    const top = house(g, { w: 4.4, d: 3.4, h: 2.6, wall: '#eef8e2', roof: '#5aa83c', roofType: 'flat', sign: '光合作用工廠', signColor: '#5aa83c' });
+    add(g, G.cyl(0.1, 0.12, 2.4, 8), '#7a5a3a', 0, top + 1.2, 0);
+    add(g, G.sph(2.4, 20, 12), '#5fb35a', 0, top + 2.6, 0, { sc: [1, 0.22, 0.6], rz: 0.15 });
+    add(g, G.box(4.4, 0.05, 0.08), '#3f8d44', 0, top + 2.75, 0, { rz: 0.15, cast: false });
+    const sunG = add(g, G.sph(0.7, 16, 12), basic('#ffd84d'), -2.8, top + 4.4, -1, { cast: false });
+    animators.push((t) => sunG.scale.setScalar(1 + 0.08 * Math.sin(t * 2)));
+    add(g, G.cyl(0.18, 0.18, 2.2, 10), '#5b9bd5', 2.6, 1.0, -0.6);
+    add(g, G.cyl(0.18, 0.18, 0.9, 10), '#5b9bd5', 2.25, 2.0, -0.6, { rz: Math.PI / 2 });
+    const co2 = bubbles(g, 4, () => add(g, G.sph(0.17, 8, 6), '#b9b5aa', 0, 0, 0, { cast: false }));
+    const o2 = bubbles(g, 5, () => add(g, G.sph(0.15, 8, 6), '#bfe8ff', 0, 0, 0, { cast: false }));
+    animators.push((t) => {
+      co2.forEach((m, i) => { const p = (t * 0.3 + i / 4) % 1; m.position.set(-4.2 + p * 2.0, 1.6 + Math.sin(p * 6 + i) * 0.2, 1.0); });
+      o2.forEach((m, i) => { const p = (t * 0.35 + i / 5) % 1; m.position.set(0.8 + Math.sin(i * 2) * 0.6, top + 0.4 + p * 2.6, 1.0 + Math.cos(i) * 0.4); });
+    });
+    for (let k = 0; k < 4; k++) add(g, G.rbox(0.3, 0.3, 0.3, 0.05), '#ffffff', -2.8 + (k % 2) * 0.35, 0.15 + (k >> 1) * 0.3, 2.3);
+    return top + 2.9;
+  },
+  leafExp(g) {
+    add(g, G.cyl(0.8, 0.6, 0.9, 16), '#d77a4a', -1.8, 0.45, 0);
+    add(g, G.cyl(0.72, 0.72, 0.06, 16), '#6e4a30', -1.8, 0.88, 0);
+    add(g, G.cyl(0.06, 0.08, 1.6, 6), '#4f9a4a', -1.8, 1.7, 0);
+    for (let k = 0; k < 6; k++) { const a = k * 1.05; add(g, G.sph(0.45, 12, 8), '#6cbf5a', -1.8 + Math.cos(a) * 0.55, 1.4 + (k % 3) * 0.45, Math.sin(a) * 0.55, { sc: [1, 0.15, 0.55], ry: -a }); }
+    add(g, G.rbox(0.45, 0.12, 0.5, 0.04), '#d6dce4', -1.25, 1.42, 0.05, { rz: 0.05 });
+    const ty = table(g, 1.3, 0.2, 2.6, 1.2);
+    [['沸水', '#cfe9ff'], ['酒精', '#cdeec0'], ['碘液', '#c9945a']].forEach(([n, c], i) => {
+      const x = 0.4 + i * 0.75; add(g, G.cyl(0.25, 0.25, 0.5, 14), GLASS('#ffffff', 0.4), x, ty + 0.25, 0.1, { cast: false });
+      add(g, G.cyl(0.22, 0.22, 0.3, 14), c, x, ty + 0.15, 0.1, { cast: false });
+      add(g, G.plane(0.6, 0.24), texMat(textTex(n, { w: 160, h: 64, size: 40 })), x, ty + 0.65, 0.12, { cast: false });
+    });
+    const leafTex = canvasTex(256, 160, (x, w, h) => { x.fillStyle = '#fbf8f0'; x.fillRect(0, 0, w, h); x.fillStyle = '#3d3a7a'; x.beginPath(); x.ellipse(128, 80, 110, 60, 0, 0, 7); x.fill(); x.fillStyle = '#c9a55a'; x.fillRect(70, 40, 80, 80); });
+    add(g, G.circle(0.4), texMat(leafTex), 2.6, ty + 0.03, 0.3, { rx: -Math.PI / 2, cast: false });
+    postSign(g, '照光／遮光', 2.8, 1.8, { w: 1.6, h: 0.9, color: '#5aa83c' });
+    return 3.4;
+  },
+  mouth(g) {
+    add(g, G.rbox(6.2, 0.5, 3.4, 0.2), '#f1d3dc', 0, 0.25, 0);
+    add(g, G.rbox(5.4, 3.6, 1.8, 0.8), '#f6a6b6', 0, 2.2, -0.6);
+    add(g, G.sph(1.5, 22, 16), '#7a2a3a', 0, 1.95, 0.32, { sc: [1.25, 0.72, 0.3], cast: false });
+    add(g, G.tor(1.85, 0.3, Math.PI * 2, 32), '#e2506a', 0, 1.95, 0.38, { sc: [1, 0.62, 1] });
+    for (let k = 0; k < 6; k++) { const x = -1.25 + k * 0.5; add(g, G.rbox(0.4, 0.38, 0.16, 0.08), '#ffffff', x, 2.42 - Math.abs(x) * 0.12, 0.45, { cast: false }); add(g, G.rbox(0.4, 0.34, 0.16, 0.08), '#ffffff', x, 1.5 + Math.abs(x) * 0.12, 0.45, { cast: false }); }
+    add(g, G.sph(0.85, 16, 12), '#f3809b', 0, 1.25, 1.15, { sc: [1, 0.22, 1.1] });
+    for (const s of [-1, 1]) {
+      add(g, G.sph(0.42, 14, 10), '#ffffff', s * 1.3, 3.45, 0.2, { sc: [1, 1, 0.5] });
+      add(g, G.sph(0.2, 10, 8), '#2f2622', s * 1.25, 3.4, 0.4, { cast: false });
+      add(g, G.sph(0.28, 10, 8), '#ff9fa8', s * 2.1, 2.6, 0.25, { sc: [1, 0.6, 0.3], cast: false });
+      add(g, G.sph(0.35, 12, 10), '#f6b8c7', s * 3.2, 0.75, 1.0); add(g, G.sph(0.25, 10, 8), '#f6b8c7', s * 3.05, 1.15, 0.8);
+      const d = add(g, G.sph(0.1, 8, 6), '#8fd6f5', s * 2.9, 1.2, 1.1, { cast: false });
+      animators.push((t) => { const p = (t * 0.6 + (s > 0 ? 0.5 : 0)) % 1; d.position.set(s * (2.9 - p * 1.1), 1.2 + p * 0.5, 1.1 - p * 0.6); });
+    }
+    postSign(g, '第 1 站　口腔', 2.6, 2.0, { w: 2.0, h: 1.0, color: '#e07aa0' });
+    return 4.6;
+  },
+  esophagus(g) {
+    plinth(g, 4.4, 3.6, '#f1d3dc');
+    add(g, G.cyl(0.8, 1.0, 3.4, 14), '#f6c4d0', -1.4, 1.7, -0.6);
+    add(g, G.cone(1.1, 1.1, 14), '#e07aa0', -1.4, 3.95, -0.6);
+    add(g, G.plane(1.0, 0.4), texMat(textTex('咽', { w: 160, h: 64, size: 46 })), -1.4, 2.4, 0.42, { cast: false });
+    const curve = new THREE.CatmullRomCurve3([new V3(-0.8, 3.1, -0.4), new V3(0.4, 2.7, 0.2), new V3(1.4, 2.0, -0.2), new V3(1.8, 1.2, 0.8), new V3(1.2, 0.5, 1.6)]);
+    add(g, new THREE.TubeGeometry(curve, 60, 0.5, 14, false), GLASS('#f6a6b6', 0.7), 0, 0, 0, { cast: false });
+    const ring = add(g, G.tor(0.55, 0.16, Math.PI * 2, 20), '#e07aa0', 0, 0, 0, { cast: false });
+    const ball = add(g, G.sph(0.3, 12, 10), '#fffaf0', 0, 0, 0, { cast: false });
+    const tg = new V3(), pt = new V3();
+    animators.push((t) => { const p = (t * 0.35) % 1; curve.getPointAt(p, pt); curve.getTangentAt(p, tg); ring.position.copy(pt); ball.position.copy(pt); ring.lookAt(pt.x + tg.x, pt.y + tg.y, pt.z + tg.z); });
+    postSign(g, '第 2、3 站　咽・食道', 1.9, 2.0, { w: 2.4, h: 0.9, color: '#e07aa0' });
+    return 4.8;
+  },
+  stomach(g) {
+    plinth(g, 6, 4.4, '#f1d3dc');
+    add(g, G.sph(2.2, 22, 16), '#f39a8a', -0.4, 2.0, 0, { sc: [1.1, 0.9, 0.85] });
+    add(g, G.sph(1.2, 18, 14), '#f39a8a', 1.7, 1.1, 0.2, { sc: [1.2, 0.8, 0.8] });
+    add(g, G.cyl(0.45, 0.55, 1.2, 12), '#f39a8a', -1.5, 3.8, -0.2, { rz: 0.4 });
+    for (let k = 0; k < 14; k++) { const a = k * 2.4; add(g, G.sph(0.1, 6, 5), '#d9657a', -0.4 + Math.cos(a) * 2.1, 2.0 + Math.sin(k) * 1.0, Math.sin(a) * 1.4 + 0.3, { cast: false }); }
+    add(g, G.rbox(1.0, 1.4, 0.4, 0.15), '#b0505c', 0.2, 0.95, 1.6);
+    add(g, G.cyl(1.0, 1.0, 0.08, 20), '#d9e86a', -0.4, 3.85, 0.1, { cast: false });
+    const bub = bubbles(g, 6, () => add(g, G.sph(0.12, 8, 6), '#eef7a8', 0, 0, 0, { cast: false }));
+    animators.push((t) => bub.forEach((m, i) => { const p = (t * 0.6 + i / 6) % 1; m.position.set(-0.4 + Math.cos(i * 2.1) * 0.6, 3.9 + p * 0.9, 0.1 + Math.sin(i * 2.1) * 0.5); m.scale.setScalar(1 - p * 0.6); }));
+    wallSign(g, '胃液：鹽酸＋酵素', 0.2, 2.0, 2.05, 2.4, '#e07aa0');
+    return 5;
+  },
+  liver(g) {
+    plinth(g, 6.2, 4.2, '#ead2c6');
+    add(g, G.sph(2.3, 22, 16), '#a8543f', -0.5, 1.6, 0, { sc: [1.25, 0.65, 0.85] });
+    add(g, G.sph(1.4, 18, 14), '#b5604a', 1.9, 1.3, 0.2, { sc: [1, 0.6, 0.8] });
+    add(g, G.cap(0.45, 0.6, 12), '#6cbf5a', 1.2, 0.75, 1.7, { rz: 0.6 });
+    add(g, G.cyl(0.12, 0.12, 2.2, 8), '#f2cf4a', 2.4, 0.5, 2.3, { rz: Math.PI / 2 });
+    const drops = bubbles(g, 4, () => add(g, G.sph(0.11, 8, 6), '#f2cf4a', 0, 0, 0, { cast: false }));
+    animators.push((t) => drops.forEach((m, i) => { const p = (t * 0.4 + i / 4) % 1; m.position.set(1.4 + p * 2.0, 0.5, 2.3); }));
+    add(g, G.rbox(0.9, 1.3, 0.3, 0.12), '#7a3a2c', -0.6, 0.85, 1.85);
+    wallSign(g, '肝臟・膽囊', -0.6, 2.05, 1.95, 2.0, '#a8543f');
+    postSign(g, '膽汁：乳化脂質', -2.9, 2.0, { w: 1.9, h: 1.0, color: '#a8543f' });
+    return 3.6;
+  },
+  pancreas(g) {
+    plinth(g, 6.2, 3.2, '#efe2c2');
+    [[-2.2, 1.0], [-1.1, 0.95], [0, 0.85], [1.0, 0.72], [1.9, 0.6]].forEach(([x, r], i) => add(g, G.sph(r, 16, 12), i % 2 ? '#f2c36b' : '#f5cf7e', x, r * 0.9 + 0.2, Math.sin(i) * 0.2));
+    add(g, G.cyl(0.13, 0.13, 3.8, 8), '#e8a13a', -0.2, 0.45, 1.2, { rz: Math.PI / 2 });
+    const drops = bubbles(g, 5, () => add(g, G.sph(0.1, 8, 6), '#ffe08a', 0, 0, 0, { cast: false }));
+    animators.push((t) => drops.forEach((m, i) => { const p = (t * 0.4 + i / 5) % 1; m.position.set(1.7 - p * 3.8, 0.45, 1.2); }));
+    add(g, G.rbox(0.8, 1.1, 0.3, 0.12), '#b97a28', -1.1, 0.75, 0.95);
+    postSign(g, '胰液：醣類・蛋白質・脂質', 0.9, 2.1, { w: 2.6, h: 1.0, color: '#e8a13a' });
+    return 3;
+  },
+  intestine(g) {
+    add(g, G.rbox(7.4, 0.4, 4.6, 0.2), '#f1d3dc', 0, 0.2, 0);
+    const pts = []; for (let i = 0; i <= 40; i++) { const t = i / 40; pts.push(new V3(-3.0 + t * 6.0, 0.8, Math.sin(t * Math.PI * 4) * 1.4 - 0.4)); }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    add(g, new THREE.TubeGeometry(curve, 120, 0.42, 12, false), '#f6a6b6', 0, 0, 0);
+    const food = add(g, G.sph(0.3, 10, 8), '#fff2c8', 0, 0, 0, { cast: false }); const pt = new V3();
+    animators.push((t) => { curve.getPointAt((t * 0.08) % 1, pt); food.position.copy(pt); food.position.y += 0.1; });
+    const vg = cached('villus', () => mergeGeos([xf(new THREE.CylinderGeometry(0.11, 0.13, 0.7, 8), { y: 0.35 }), xf(new THREE.SphereGeometry(0.11, 8, 6), { y: 0.7 })]));
+    const N = 40; const vm = new THREE.InstancedMesh(vg, toon('#f08aa0'), N); const M = new THREE.Matrix4(); const Q = new THREE.Quaternion(); const S = new V3(1, 1, 1);
+    for (let i = 0; i < N; i++) { const x = -3.0 + (i % 10) * 0.66, z = 1.4 + Math.floor(i / 10) * 0.28; M.compose(new V3(x, 0.4, z), Q, S.set(1, 0.7 + ((i * 7) % 5) * 0.12, 1)); vm.setMatrixAt(i, M); }
+    vm.castShadow = true; g.add(vm);
+    postSign(g, '絨毛：增加吸收面積', 2.4, 2.4, { w: 2.4, h: 1.0, color: '#e07aa0' });
+    postSign(g, '第 5 站　小腸（最長）', -2.6, 2.6, { w: 2.4, h: 1.2, color: '#e07aa0' });
+    return 2.6;
+  },
+  colon(g) {
+    add(g, G.rbox(6.6, 0.4, 3.6, 0.2), '#f1d3dc', 0, 0.2, 0);
+    add(g, G.tor(2.3, 0.75, Math.PI, 28), '#e0907e', 0, 0.4, 0);
+    for (let k = 0; k < 7; k++) add(g, G.tor(2.3, 0.8, 0.12, 6), '#c97a6a', 0, 0.4, 0, { rz: 0.2 + k * 0.42, cast: false });
+    add(g, G.cap(0.18, 0.5, 8), '#e0907e', -2.6, 0.35, 0.6, { rz: 0.3 });
+    const drops = bubbles(g, 5, () => add(g, G.sph(0.12, 8, 6), '#8fd6f5', 0, 0, 0, { cast: false }));
+    animators.push((t) => drops.forEach((m, i) => { const p = (t * 0.3 + i / 5) % 1; const a = 0.4 + i * 0.5; m.position.set(Math.cos(a) * (2.3 + p * 1.2), 0.4 + Math.sin(a) * (2.3 + p * 1.2), 0); m.scale.setScalar(1 - p * 0.7); }));
+    postSign(g, '吸收剩餘水分', -2.9, 1.6, { w: 1.8, h: 0.9, color: '#c97a6a' });
+    postSign(g, '終點：肛門（排遺）', 2.8, 1.6, { w: 2.2, h: 0.9, color: '#c97a6a' });
+    return 4;
+  },
+  gutMuseum(g) {
+    const top = house(g, { w: 5.2, d: 3.8, h: 2.8, wall: '#fff6e8', roof: PAL.teal, roofH: 1.6, sign: '胃的科學故事館', signColor: PAL.teal });
+    const ty = table(g, -3.8, 1.2, 1.6, 1.0);
+    const helix = new THREE.CatmullRomCurve3(Array.from({ length: 30 }, (_, i) => new V3(Math.cos(i * 0.9) * 0.18, i * 0.04, Math.sin(i * 0.9) * 0.18)));
+    const h = add(g, new THREE.TubeGeometry(helix, 80, 0.08, 8, false), '#8fcf6a', -4.1, ty + 0.1, 1.2);
+    for (let k = 0; k < 3; k++) add(g, G.cyl(0.015, 0.015, 0.4, 4), '#6aa84f', -4.1 + (k - 1) * 0.08, ty + 1.45, 1.2, { rz: (k - 1) * 0.3, cast: false });
+    animators.push((t) => { h.rotation.y = t * 1.5; });
+    add(g, G.cyl(0.32, 0.32, 0.06, 20), '#f2c94a', -3.4, ty + 0.5, 1.2, { rx: Math.PI / 2 });
+    add(g, G.plane(0.5, 0.2), texMat(textTex('2005', { w: 120, h: 50, size: 34, bg: null, fg: '#8a6510' })), -3.4, ty + 0.5, 1.24, { cast: false });
+    add(g, G.box(0.04, 0.5, 0.04), '#8a6510', -3.4, ty + 0.25, 1.2);
+    return top;
+  },
+  stemHall(g) {
+    const top = house(g, { w: 4.6, d: 3.6, h: 2.8, wall: '#e3f2ee', roof: PAL.teal, roofH: 1.6, sign: '維管束展示館', signColor: PAL.teal });
+    const s = new THREE.Group(); s.position.set(3.6, 0, 0.4); g.add(s);
+    add(s, G.cyl(1.1, 1.2, 0.4, 20), PAL.stone, 0, 0.2, 0);
+    add(s, G.cyl(1.0, 1.0, 4.6, 24), GLASS('#bfeab0', 0.35), 0, 2.7, 0, { cast: false });
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; add(s, G.cyl(0.11, 0.11, 4.4, 8), '#5b9bd5', Math.cos(a) * 0.45, 2.7, Math.sin(a) * 0.45, { cast: false }); add(s, G.cyl(0.09, 0.09, 4.4, 8), '#e2574c', Math.cos(a) * 0.75, 2.7, Math.sin(a) * 0.75, { cast: false }); }
+    const ups = bubbles(s, 6, () => add(s, G.sph(0.13, 8, 6), '#2f7fd0', 0, 0, 0, { cast: false }));
+    const downs = bubbles(s, 6, () => add(s, G.sph(0.11, 8, 6), '#c62f45', 0, 0, 0, { cast: false }));
+    animators.push((t) => {
+      ups.forEach((m, i) => { const a = i / 6 * Math.PI * 2; const p = (t * 0.25 + i / 6) % 1; m.position.set(Math.cos(a) * 0.45, 0.6 + p * 4.2, Math.sin(a) * 0.45); });
+      downs.forEach((m, i) => { const a = i / 6 * Math.PI * 2; const p = (t * 0.2 + i / 6) % 1; m.position.set(Math.cos(a) * 0.75, i % 2 ? 4.8 - p * 4.2 : 0.6 + p * 4.2, Math.sin(a) * 0.75); });
+    });
+    add(s, G.sph(1.0, 16, 10), '#6cbf5a', 0, 5.3, 0, { sc: [1.4, 0.3, 1.0] });
+    return Math.max(top, 5.6);
+  },
+  stemSlices(g) {
+    const mk = (ring) => canvasTex(256, 256, (x) => {
+      x.fillStyle = '#cfe8b4'; x.beginPath(); x.arc(128, 128, 124, 0, 7); x.fill(); x.lineWidth = 8; x.strokeStyle = '#7fb35c'; x.stroke();
+      const dot = (cx, cy) => { x.fillStyle = '#e2574c'; x.beginPath(); x.arc(cx, cy, 13, 0, 7); x.fill(); x.fillStyle = '#5b9bd5'; x.beginPath(); x.arc(cx + (128 - cx) * 0.06, cy + (128 - cy) * 0.06, 8, 0, 7); x.fill(); };
+      if (ring) { x.strokeStyle = '#2f9e7c'; x.lineWidth = 4; x.setLineDash([6, 5]); x.beginPath(); x.arc(128, 128, 82, 0, 7); x.stroke(); x.setLineDash([]); for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; dot(128 + Math.cos(a) * 82, 128 + Math.sin(a) * 82); } }
+      else { const r2 = mulberry32(7); for (let i = 0; i < 26; i++) { const a = r2() * 7, rr = Math.sqrt(r2()) * 100; dot(128 + Math.cos(a) * rr, 128 + Math.sin(a) * rr); } }
+    });
+    [[-2.0, false, '散生（玉米・水稻）'], [2.0, true, '環狀（向日葵・南瓜）']].forEach(([x, ring, label]) => {
+      add(g, G.cyl(1.8, 1.8, 0.6, 32), '#a8d48a', x, 0.3, 0);
+      add(g, G.circle(1.75), texMat(mk(ring)), x, 0.62, 0, { rx: -Math.PI / 2, cast: false });
+      postSign(g, label, x, 2.2, { w: 2.1, h: 0.8, color: PAL.teal });
+    });
+    return 2.4;
+  },
+  stump(g) {
+    add(g, G.cyl(2.6, 2.9, 1.4, 28), '#7a5236', 0, 0.7, 0);
+    const rings = canvasTex(256, 256, (x) => {
+      for (let r = 124; r > 4; r -= 7) { x.fillStyle = (Math.round(r / 7) % 2) ? '#f0d29a' : '#c99a5e'; x.beginPath(); x.arc(128, 128, r, 0, 7); x.fill(); }
+      x.strokeStyle = '#5a3a22'; x.lineWidth = 8; x.beginPath(); x.arc(128, 128, 124, 0, 7); x.stroke();
+    });
+    add(g, G.circle(2.55), texMat(rings), 0, 1.41, 0, { rx: -Math.PI / 2, cast: false });
+    for (let k = 0; k < 4; k++) { const a = k * 1.6 + 0.4; add(g, G.cap(0.35, 1.2, 8), '#6b462c', Math.cos(a) * 2.7, 0.3, Math.sin(a) * 2.7, { rz: Math.PI / 2, ry: -a, order: 'YXZ' }); }
+    postSign(g, '淺色：春夏　深色：秋冬', 0, 3.4, { w: 2.6, h: 1.0, color: PAL.teal });
+    postSign(g, '樹皮｜形成層｜木材', -3.2, 1.2, { w: 2.2, h: 0.9, color: '#7a5236' });
+    return 2.6;
+  },
+  roots(g) {
+    add(g, G.cone(1.3, 3.2, 14), '#d8b07a', 0, 1.0, 0, { rx: Math.PI });
+    add(g, G.cyl(1.35, 1.35, 0.4, 14), '#c49a62', 0, 2.6, 0);
+    for (let i = 0; i < 26; i++) { const y = 0.3 + (i % 9) * 0.22, a = i * 2.39, rr = 1.0 - (y / 2.6) * -0.2; const r0 = 0.25 + (y / 2.6) * 1.0; add(g, G.cyl(0.025, 0.02, 0.8, 4), '#fff4e0', Math.cos(a) * (r0 + 0.35), y, Math.sin(a) * (r0 + 0.35), { rz: Math.PI / 2, ry: -a, order: 'YXZ', cast: false }); }
+    add(g, G.cyl(0.28, 0.28, 3.6, 12), GLASS('#ffffff', 0.4), 0, 4.6, 0, { cast: false });
+    add(g, G.sph(0.9, 14, 10), '#6cbf5a', 0, 6.6, 0, { sc: [1.4, 0.3, 1.0] });
+    const drops = bubbles(g, 6, () => add(g, G.sph(0.17, 8, 6), '#4fa8e0', 0, 0, 0, { cast: false }));
+    animators.push((t) => drops.forEach((m, i) => { const p = (t * 0.3 + i / 6) % 1; m.position.set(0, 2.9 + p * 3.5, 0); }));
+    postSign(g, '根毛：增加吸收面積', 2.4, 1.6, { w: 2.2, h: 1.0, color: PAL.teal });
+    return 7.2;
+  },
+  transpTower(g) {
+    add(g, G.cyl(0.8, 1.1, 0.5, 14), PAL.stone, 0, 0.25, 0);
+    add(g, G.cyl(0.45, 0.55, 4.4, 12), '#8cbf5a', 0, 2.6, 0);
+    add(g, G.sph(2.0, 20, 12), '#5fb35a', 0, 5.0, 0, { sc: [1.2, 0.25, 1.0] });
+    const gL = add(g, G.cap(0.2, 0.6, 8), '#3f8d44', 0, 5.3, 0.6, { rx: Math.PI / 2 }), gR = add(g, G.cap(0.2, 0.6, 8), '#3f8d44', 0, 5.3, 0.6, { rx: Math.PI / 2 });
+    const vap = bubbles(g, 6, () => add(g, G.sph(0.3, 10, 8), basic('#ffffff', { transparent: true, opacity: 0.6 }), 0, 0, 0, { cast: false }));
+    animators.push((t) => {
+      const open = REDUCED ? 0.5 : (Math.sin(t * 0.7) + 1) / 2; gL.position.x = -0.18 - open * 0.18; gR.position.x = 0.18 + open * 0.18;
+      vap.forEach((m, i) => { const p = (t * 0.3 + i / 6) % 1; m.position.set(Math.sin(i * 2) * 0.4, 5.5 + p * 2.4, 0.6 + Math.cos(i) * 0.3); m.scale.setScalar((0.5 + p) * (0.3 + open)); m.material.opacity = 0.55 * (1 - p); });
+    });
+    postSign(g, '氣孔：白天開・夜晚關', 2.0, 1.4, { w: 2.4, h: 1.0, color: PAL.teal });
+    return 6.6;
+  },
+  express(g) {
+    const top = house(g, { w: 4.4, d: 3.4, h: 2.6, wall: '#fff0f0', roof: '#d9485a', roofH: 1.5, sign: '韌皮部快遞', signColor: '#d9485a' });
+    for (const s of [-1, 1]) { add(g, G.rbox(0.5, 3.4, 0.5, 0.1), '#8cbf5a', 3.1 + s * 0.45, 1.7, 0.6); }
+    const boxes = bubbles(g, 6, (i) => add(g, G.rbox(0.36, 0.3, 0.36, 0.06), '#e2574c', 0, 0, 0));
+    animators.push((t) => boxes.forEach((m, i) => { const up = i % 2 === 0; const p = (t * 0.25 + i / 6) % 1; m.position.set(3.1 + (up ? -0.45 : 0.45), up ? 0.4 + p * 3.0 : 3.4 - p * 3.0, 0.95); }));
+    add(g, G.plane(0.5, 0.5), texMat(textTex('↑', { w: 96, h: 96, size: 70 })), 2.65, 3.75, 0.9, { cast: false });
+    add(g, G.plane(0.5, 0.5), texMat(textTex('↓', { w: 96, h: 96, size: 70 })), 3.55, 3.75, 0.9, { cast: false });
+    const cart = new THREE.Group(); cart.position.set(-3.2, 0, 1.6); g.add(cart);
+    add(cart, G.rbox(1.2, 0.6, 0.8, 0.12), '#d9485a', 0, 0.55, 0);
+    for (const s of [-1, 1]) add(cart, G.cyl(0.22, 0.22, 0.1, 12), '#4b3a2e', s * 0.4, 0.22, 0.42, { rx: Math.PI / 2 });
+    add(cart, G.rbox(0.4, 0.35, 0.4, 0.06), '#f2c94a', 0, 1.05, 0);
+    return top;
+  },
+  celeryLab(g) {
+    const ty = table(g, 0, 0, 3.4, 1.4);
+    [[-0.7, '甲', true, 0.55], [0.7, '乙', false, 0.85]].forEach(([x, n, leaves, lv]) => {
+      add(g, G.cyl(0.32, 0.32, 1.2, 16), GLASS('#ffffff', 0.35), x, ty + 0.6, 0, { cast: false });
+      add(g, G.cyl(0.29, 0.29, 1.2 * lv, 16), toon('#e2574c', { transparent: true, opacity: 0.7 }), x, ty + 0.6 * lv, 0, { cast: false });
+      add(g, G.cap(0.1, 1.6, 8), '#9fd06a', x, ty + 1.3, 0, { rz: 0.08 });
+      if (leaves) for (let k = 0; k < 4; k++) add(g, G.sph(0.32, 10, 8), '#5fb35a', x + Math.cos(k * 1.6) * 0.3, ty + 2.25 + (k % 2) * 0.2, Math.sin(k * 1.6) * 0.3, { sc: [1, 0.5, 1] });
+      add(g, G.plane(0.4, 0.4), texMat(textTex(n, { w: 96, h: 96, size: 60 })), x, ty + 0.25, 0.4, { cast: false });
+    });
+    const xs = canvasTex(192, 192, (x) => { x.fillStyle = '#dff2c8'; x.beginPath(); x.arc(96, 96, 90, 0, 7); x.fill(); x.fillStyle = '#e2574c'; for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; x.beginPath(); x.arc(96 + Math.cos(a) * 60, 96 + Math.sin(a) * 60, 10, 0, 7); x.fill(); } });
+    add(g, G.circle(0.5), texMat(xs), 1.4, ty + 0.02, 0.35, { rx: -Math.PI / 2, cast: false });
+    postSign(g, '有葉 vs 沒葉', -2.4, 1.2, { w: 1.7, h: 0.9, color: PAL.teal });
+    return 3.6;
+  },
+  heart(g) {
+    plinth(g, 8, 5, '#f0d0d4');
+    const H = new THREE.Group(); H.position.y = 0.4; g.add(H);
+    for (const s of [-1, 1]) add(H, G.sph(2.1, 24, 18), '#e2475e', s * 1.35, 3.6, 0, { sc: [1, 1, 0.85] });
+    add(H, G.cone(3.0, 3.6, 28), '#e2475e', 0, 1.6, 0, { rx: Math.PI, sc: [1, 1, 0.82] });
+    add(H, G.tor(1.0, 0.36, Math.PI, 16), '#d9485a', 0.7, 5.5, -0.3, { ry: 0.3 });
+    add(H, G.cyl(0.36, 0.36, 1.4, 12), '#4f7fd8', -0.9, 5.7, 0.2);
+    add(H, G.cyl(0.3, 0.3, 1.2, 12), '#4f7fd8', -2.0, 5.3, -0.4);
+    [['右心房', -1.35, 4.0], ['左心房', 1.35, 4.0], ['右心室', -0.85, 2.3], ['左心室', 0.85, 2.3]].forEach(([n, x, y]) => {
+      add(H, G.rbox(1.3, 0.75, 0.12, 0.1), '#fff3dc', x, y, 1.86);
+      add(H, G.plane(1.15, 0.5), texMat(textTex(n, { w: 256, h: 110, size: 60, bg: '#fff3dc', border: n.startsWith('右') ? '#4f7fd8' : '#e2475e' })), x, y, 1.94, { cast: false });
+    });
+    animators.push((t) => { if (REDUCED) return; const b = Math.max(0, Math.sin(t * 7.5)) ** 6 * 0.06; H.scale.set(1 + b, 1 + b, 1 + b); });
+    return 7;
+  },
+  vesselRings(g) {
+    [['動脈', -2.4, 1.0, 0.42, '#d9485a', 1.7], ['微血管', 0, 0.38, 0.07, '#9b5bbf', 1.2], ['靜脈', 2.4, 1.1, 0.2, '#4f7fd8', 1.7]].forEach(([n, x, R, r, c, y]) => {
+      add(g, G.rbox(1.6, 0.5, 1.2, 0.15), PAL.stone, x, 0.25, 0);
+      add(g, G.tor(R, r, Math.PI * 2, 28), c, x, y + 0.5, 0);
+      add(g, G.plane(1.2, 0.42), texMat(textTex(n, { w: 256, h: 90, size: 54, border: c })), x, 0.5, 0.62, { cast: false });
+    });
+    const rbcs = bubbles(g, 4, () => add(g, G.tor(0.12, 0.06, Math.PI * 2, 10), '#e2475e', 0, 0, 0, { cast: false }));
+    animators.push((t) => rbcs.forEach((m, i) => { const p = (t * 0.5 + i / 4) % 1; m.position.set(-2.4, 2.2, -1.2 + p * 2.4); }));
+    add(g, G.box(0.06, 0.04, 2.4), '#d9485a', -2.4, 2.2, 0, { cast: false });
+    return 3.4;
+  },
+  bloodHouse(g) {
+    const top = house(g, { w: 4.4, d: 3.4, h: 2.6, wall: '#fff0f0', roof: '#d9485a', roofH: 1.5, sign: '血球宿舍', signColor: '#d9485a' });
+    add(g, G.cyl(1.3, 1.4, 0.45, 24), PAL.stone, -3.3, 0.22, 1.4);
+    add(g, G.cyl(1.15, 1.15, 0.06, 24), toon('#f6e08a', { transparent: true, opacity: 0.8 }), -3.3, 0.45, 1.4, { cast: false });
+    const fl = [];
+    for (let k = 0; k < 3; k++) fl.push(add(g, G.tor(0.22, 0.11, Math.PI * 2, 14), '#e2475e', 0, 0, 0));
+    const w = add(g, G.sph(0.4, 14, 10), '#f4f4fa', 0, 0, 0); add(w, G.sph(0.2, 10, 8), '#9b7ad8', 0.12, 0.08, 0.22, { cast: false });
+    for (let k = 0; k < 3; k++) fl.push(add(g, cached('dod', () => new THREE.DodecahedronGeometry(0.1)), '#c9a0e0', 0, 0, 0));
+    fl.push(w);
+    animators.push((t) => fl.forEach((m, i) => { const a = t * 0.5 + i * 0.9; m.position.set(-3.3 + Math.cos(a) * (0.4 + (i % 3) * 0.22), 0.6 + Math.sin(t * 2 + i) * 0.05, 1.4 + Math.sin(a) * (0.4 + (i % 3) * 0.22)); if (i < 3) m.rotation.x = Math.PI / 2 + Math.sin(t + i) * 0.3; }));
+    postSign(g, '血漿＋血球', -3.3, 3.0, { w: 1.6, h: 0.9, color: '#d9485a' });
+    return top;
+  },
+  pulseLab(g) {
+    const ty = table(g, 1.0, 0.6, 2.2, 1.1);
+    add(g, G.tor(0.35, 0.05, Math.PI * 1.6, 16), '#5a5a62', 0.6, ty + 0.05, 0.6, { rx: Math.PI / 2 });
+    add(g, G.cyl(0.14, 0.14, 0.06, 14), '#c9ccd4', 1.2, ty + 0.04, 0.6);
+    const ecg = canvasTex(512, 220, (x, w, h) => {
+      x.fillStyle = '#123'; x.fillRect(0, 0, w, h); x.strokeStyle = '#5fe08a'; x.lineWidth = 6; x.beginPath();
+      for (let i = 0; i <= w; i += 4) { const ph = (i % 170) / 170; const y = ph > 0.3 && ph < 0.36 ? 30 : ph > 0.36 && ph < 0.4 ? 170 : ph > 0.55 && ph < 0.62 ? 95 : 120; i === 0 ? x.moveTo(i, y) : x.lineTo(i, y); }
+      x.stroke(); x.fillStyle = '#fff'; x.font = `44px ${FONT}`; x.fillText('撲―通', 330, 200);
+    });
+    for (const s of [-1, 1]) add(g, G.cyl(0.08, 0.1, 2.6, 8), PAL.woodD, -1.4 + s * 1.3, 1.3, -0.6);
+    add(g, G.rbox(2.9, 1.4, 0.18, 0.08), '#2b3a4a', -1.4, 2.5, -0.6);
+    add(g, G.plane(2.6, 1.12), texMat(ecg), -1.4, 2.5, -0.5, { cast: false });
+    const hb = add(g, G.sph(0.25, 12, 10), basic('#ff5a6e'), -1.4, 3.5, -0.6, { cast: false });
+    animators.push((t) => hb.scale.setScalar(1 + Math.max(0, Math.sin(t * 7.5)) ** 6 * 0.5));
+    return 3.9;
+  },
+  fishPond(g) {
+    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; add(g, G.rbox(0.9, 0.6, 0.7, 0.25), ['#c9c4b6', '#b5b0a2'][i % 2], Math.cos(a) * 3.5, 0.25, Math.sin(a) * 3.5, { ry: -a }); }
+    const wy = -g.position.y;
+    const fish = [];
+    for (let i = 0; i < 4; i++) { const f = new THREE.Group(); g.add(f); add(f, G.sph(0.25, 10, 8), '#f2a541', 0, 0, 0, { sc: [1.6, 0.8, 0.7], cast: false }); add(f, G.cone(0.18, 0.3, 4), '#f08a2e', -0.45, 0, 0, { rz: Math.PI / 2, cast: false }); f.userData = { r: 1.0 + i * 0.5, sp: 0.5 + i * 0.15, ph: i * 1.7 }; fish.push(f); }
+    animators.push((t) => fish.forEach((f) => { const a = t * f.userData.sp + f.userData.ph; f.position.set(Math.cos(a) * f.userData.r, wy - 0.15, Math.sin(a) * f.userData.r); f.rotation.y = -a - Math.PI / 2; }));
+    const ty = table(g, -2.0, 3.6, 1.4, 0.9);
+    microscope(g, -2.0, ty, 3.6, 0.42, 0.6);
+    postSign(g, '小動脈→微血管→小靜脈', 2.4, 3.6, { w: 2.6, h: 1.0, color: '#d9485a' });
+    return 2.6;
+  },
+  lungs(g) {
+    plinth(g, 6.4, 4.0, '#f0d6dc');
+    add(g, G.cyl(0.32, 0.32, 2.4, 12), '#f4f0e4', 0, 3.6, 0);
+    for (const s of [-1, 1]) {
+      add(g, G.cyl(0.22, 0.22, 1.4, 10), '#f4f0e4', s * 0.55, 2.4, 0, { rz: s * 0.9 });
+      for (let k = 0; k < 16; k++) { const a = k * 2.4; const r = 0.4 + (k % 5) * 0.28; add(g, G.sph(0.42, 10, 8), k % 2 ? '#f6a6b6' : '#f3b3c2', s * (1.8 + Math.cos(a) * r * 0.7), 1.3 + Math.sin(a) * r * 0.9 + (k % 3) * 0.25, Math.sin(k) * 0.6); }
+    }
+    const o2 = bubbles(g, 5, () => add(g, G.sph(0.14, 8, 6), '#bfe8ff', 0, 0, 0, { cast: false }));
+    const co2 = bubbles(g, 5, () => add(g, G.sph(0.14, 8, 6), '#9a968c', 0, 0, 0, { cast: false }));
+    animators.push((t) => { o2.forEach((m, i) => { const p = (t * 0.3 + i / 5) % 1; m.position.set(-1.8 + Math.cos(i) * 0.5, 4.6 - p * 3.0, 1.0); }); co2.forEach((m, i) => { const p = (t * 0.3 + i / 5) % 1; m.position.set(1.8 + Math.cos(i) * 0.5, 1.6 + p * 3.0, 1.0); }); });
+    postSign(g, 'O₂ 進・CO₂ 出', 0, 2.4, { w: 1.8, h: 0.9, color: '#3f87d6' });
+    return 5;
+  },
+  tissues(g) {
+    add(g, G.rbox(5.2, 0.4, 3.4, 0.15), PAL.stone, 0, 0.2, 0);
+    const cols = ['#f6c4a8', '#c9e7a8', '#f3d98a', '#c9d3f2', '#f0b8d0'];
+    for (let i = 0; i < 12; i++) { const x = -2.0 + (i % 4) * 1.1, z = -0.9 + Math.floor(i / 4) * 0.9, y = 0.75 + ((i * 3) % 2) * 0.1; add(g, G.rbox(0.95, 0.75, 0.8, 0.22), cols[i % 5], x, y, z); add(g, G.sph(0.14, 8, 6), '#8a5abf', x + 0.1, y + 0.4, z, { cast: false }); }
+    const curve = new THREE.CatmullRomCurve3([new V3(-2.8, 1.5, 1.4), new V3(-1, 1.6, 1.1), new V3(1, 1.6, 1.1), new V3(2.8, 1.5, 1.4)]);
+    const tg = new THREE.TubeGeometry(curve, 40, 0.2, 10, false);
+    const col = new Float32Array(tg.attributes.position.count * 3); const cR = new THREE.Color('#e2475e'), cB = new THREE.Color('#5b7fd1'), tmp = new THREE.Color();
+    for (let i = 0; i < tg.attributes.position.count; i++) { const t = (tg.attributes.position.getX(i) + 2.8) / 5.6; tmp.copy(cR).lerp(cB, clamp(t, 0, 1)); col[i * 3] = tmp.r; col[i * 3 + 1] = tmp.g; col[i * 3 + 2] = tmp.b; }
+    tg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    add(g, tg, bendify(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GRAD })), 0, 0, 0);
+    const o2 = bubbles(g, 4, () => add(g, G.sph(0.12, 8, 6), '#bfe8ff', 0, 0, 0, { cast: false }));
+    animators.push((t) => o2.forEach((m, i) => { const p = (t * 0.4 + i / 4) % 1; m.position.set(-1.5 + i * 0.9, 1.6 - p * 0.6, 1.1 - p * 0.8); }));
+    postSign(g, '組織細胞', 3.0, 0.4, { w: 1.5, h: 0.9, color: '#3f87d6' });
+    return 2.8;
+  },
+  lymphNodes(g) {
+    const curve = new THREE.CatmullRomCurve3([new V3(-3.4, 0.35, 1.2), new V3(-1.6, 0.4, -0.6), new V3(0, 0.45, 0.8), new V3(1.8, 0.4, -0.8), new V3(3.4, 0.35, 0.6)]);
+    add(g, new THREE.TubeGeometry(curve, 60, 0.18, 8, false), '#7fcf9a', 0, 0, 0);
+    [-1.6, 0, 1.8].forEach((t0, i) => {
+      const p = curve.getPoint([0.25, 0.5, 0.75][i]);
+      add(g, G.sph(0.85, 16, 12), '#9fdcae', p.x - 0.3, 0.85, p.z, { sc: [1, 0.85, 0.8] });
+      add(g, G.sph(0.85, 16, 12), '#9fdcae', p.x + 0.3, 0.85, p.z, { sc: [1, 0.85, 0.8] });
+      const w = add(g, G.sph(0.22, 10, 8), '#f4f4fa', p.x, 1.55, p.z + 0.3, { cast: false }); bob(w, 0.1, 3);
+    });
+    const flow = bubbles(g, 5, () => add(g, G.sph(0.12, 8, 6), '#d8f5c8', 0, 0, 0, { cast: false })); const pt = new V3();
+    animators.push((t) => flow.forEach((m, i) => { curve.getPointAt((t * 0.12 + i / 5) % 1, pt); m.position.set(pt.x, pt.y + 0.15, pt.z); }));
+    postSign(g, '組織液→淋巴→靜脈', 0, 2.4, { w: 2.4, h: 1.0, color: '#3f87d6' });
+    return 3;
+  },
+  castle(g) {
+    const S = 3.4;
+    for (const [x, z, w, d] of [[0, -S, 2 * S, 0.5], [0, S, 2 * S, 0.5], [-S, 0, 0.5, 2 * S], [S, 0, 0.5, 2 * S]]) {
+      if (z === S) { add(g, G.rbox(w / 2 - 0.9, 1.4, d, 0.12), '#f6c9a8', -S / 2 - 0.45, 0.7, z); add(g, G.rbox(w / 2 - 0.9, 1.4, d, 0.12), '#f6c9a8', S / 2 + 0.45, 0.7, z); }
+      else add(g, G.rbox(w, 1.4, d, 0.12), '#f6c9a8', x, 0.7, z);
+    }
+    for (const [x, z] of [[-S, -S], [S, -S], [-S, S], [S, S]]) { add(g, G.cyl(0.6, 0.65, 2.2, 12), '#f2b894', x, 1.1, z); add(g, G.cone(0.75, 0.9, 12), '#d9485a', x, 2.65, z); }
+    add(g, G.cyl(1.1, 1.2, 3.8, 16), '#e8eef8', 0, 1.9, -0.6);
+    add(g, G.cone(1.35, 1.4, 16), '#3f87d6', 0, 4.5, -0.6);
+    const Y = (x, y, z, c) => { const yg = new THREE.Group(); yg.position.set(x, y, z); g.add(yg); add(yg, G.cyl(0.07, 0.07, 0.6, 6), c, 0, 0, 0); add(yg, G.cyl(0.07, 0.07, 0.5, 6), c, -0.17, 0.42, 0, { rz: 0.6 }); add(yg, G.cyl(0.07, 0.07, 0.5, 6), c, 0.17, 0.42, 0, { rz: -0.6 }); return yg; };
+    const ys = [Y(0, 5.6, -0.6, '#f2c94a'), Y(-1.1, 3.6, 0.3, '#f2c94a'), Y(1.1, 3.6, 0.3, '#f2c94a')];
+    animators.push((t) => ys.forEach((y, i) => { y.rotation.y = t * 0.8 + i; }));
+    for (let k = 0; k < 3; k++) { const w = add(g, G.sph(0.32, 12, 10), '#f4f4fa', -1.6 + k * 1.6, 0.4, 1.6); bob(w, 0.12, 2.5); }
+    [['第1道 皮膚・黏膜', -2.6, 4.4], ['第2道 白血球', 0, 4.4], ['第3道 淋巴球・抗體', 2.6, 4.4]].forEach(([n, x, z]) => postSign(g, n, x, z, { w: 2.2, h: 0.8, color: '#3f87d6' }));
+    return 6.4;
+  },
+  vaccineLab(g) {
+    const top = house(g, { w: 4.4, d: 3.4, h: 2.6, wall: '#f4f8ff', roof: '#3f87d6', roofH: 1.5, sign: '疫苗研究所', signColor: '#3f87d6' });
+    const cow = new THREE.Group(); cow.position.set(-3.4, 0, 1.4); cow.rotation.y = 0.6; g.add(cow);
+    add(cow, G.rbox(1.6, 0.9, 0.9, 0.35), '#ffffff', 0, 1.0, 0);
+    for (const [x, y, z] of [[-0.3, 1.25, 0.46], [0.4, 0.9, 0.46], [0.2, 1.3, -0.46]]) add(cow, G.sph(0.22, 10, 8), '#3a3a3a', x, y, z, { sc: [1, 1, 0.3], cast: false });
+    add(cow, G.rbox(0.6, 0.6, 0.6, 0.2), '#ffffff', 0.95, 1.35, 0);
+    add(cow, G.rbox(0.4, 0.3, 0.5, 0.12), '#f6b8c0', 1.25, 1.2, 0);
+    for (const s of [-1, 1]) { add(cow, G.cone(0.06, 0.25, 6), '#e8d8a8', 0.95, 1.75, s * 0.2); add(cow, G.sph(0.05, 6, 5), '#2f2622', 1.2, 1.45, s * 0.16, { cast: false }); }
+    for (const [x, z] of [[-0.55, -0.3], [-0.55, 0.3], [0.55, -0.3], [0.55, 0.3]]) add(cow, G.cyl(0.12, 0.12, 0.6, 8), '#ffffff', x, 0.3, z);
+    const sy = new THREE.Group(); sy.position.set(3.4, 0, 1.2); g.add(sy);
+    add(sy, G.cyl(0.25, 0.25, 1.6, 14), GLASS('#e8f6ff', 0.6), 0, 1.5, 0, { cast: false });
+    add(sy, G.cyl(0.2, 0.2, 0.8, 12), '#8fd6f5', 0, 1.1, 0, { cast: false });
+    add(sy, G.cyl(0.04, 0.02, 0.6, 6), '#c9ccd4', 0, 0.4, 0);
+    add(sy, G.cyl(0.06, 0.06, 0.6, 6), '#c9ccd4', 0, 2.5, 0);
+    add(sy, G.cyl(0.3, 0.3, 0.06, 14), '#c9ccd4', 0, 2.8, 0);
+    postSign(g, '牛痘→天花', -3.4, 3.4, { w: 1.6, h: 1.0, color: '#3f87d6' });
+    return top;
+  },
+};
+
+// ---------- 角色 ----------
+function makePlayer() {
+  const g = new THREE.Group();
+  const body = new THREE.Group(); g.add(body);
+  const legs = [];
+  for (const s of [-1, 1]) { const l = new THREE.Group(); l.position.set(s * 0.17, 0.42, 0); body.add(l); add(l, G.cap(0.12, 0.28, 8), '#5b7bb5', 0, -0.18, 0); add(l, G.sph(0.15, 10, 8), '#6b4a3a', 0, -0.38, 0.05, { sc: [1, 0.6, 1.3] }); legs.push(l); }
+  add(body, G.cyl(0.36, 0.52, 0.85, 16), '#fbfbf5', 0, 0.82, 0);
+  add(body, G.box(0.06, 0.6, 0.04), '#d8d8d0', 0, 0.85, 0.47, { cast: false });
+  const arms = [];
+  for (const s of [-1, 1]) { const a = new THREE.Group(); a.position.set(s * 0.42, 1.12, 0); body.add(a); add(a, G.cap(0.1, 0.36, 8), '#fbfbf5', 0, -0.22, 0); add(a, G.sph(0.1, 8, 6), '#ffe0c4', 0, -0.48, 0); arms.push(a); }
+  const head = new THREE.Group(); head.position.y = 1.62; body.add(head);
+  add(head, G.sph(0.56, 22, 18), '#ffe0c4', 0, 0, 0);
+  add(head, G.sph(0.6, 22, 12), '#5a3d2b', 0, 0.1, -0.08, { sc: [1, 0.85, 1] });
+  add(head, G.sph(0.55, 18, 10), '#ffe0c4', 0, -0.08, 0.1, { sc: [0.98, 0.8, 0.95], cast: false });
+  face(head, 0.0, 0.5, 1, 0.19);
+  add(head, G.cap(0.06, 0.12, 6), '#2f6fb0', 0.42, 0.42, 0.2, { rz: -0.8 });
+  g.userData = { legs, arms, body, head };
+  return g;
+}
+const NPC_BUILD = {
+  droplet(g, c) { add(g, G.sph(0.6, 20, 16), toon(c, { transparent: true, opacity: 0.88 }), 0, 0.8, 0); add(g, G.cone(0.42, 0.75, 18), toon(c, { transparent: true, opacity: 0.88 }), 0, 1.55, 0); add(g, G.sph(0.12, 8, 6), '#ffffff', -0.25, 1.05, 0.38, { cast: false }); face(g, 0.85, 0.52, 0.95); return 2.2; },
+  rice(g, c) { add(g, G.sph(0.5, 18, 14), '#fffdf4', 0, 0.85, 0, { sc: [0.8, 1.15, 0.75] }); add(g, G.sph(0.1, 8, 6), c, 0.18, 1.45, 0.1, { cast: false }); face(g, 0.9, 0.36, 0.85); return 1.8; },
+  enzyme(g, c) { add(g, G.rbox(0.45, 1.1, 0.7, 0.2), c, -0.36, 0.75, 0); add(g, G.rbox(0.45, 1.1, 0.7, 0.2), c, 0.36, 0.75, 0); add(g, G.rbox(1.17, 0.5, 0.7, 0.2), c, 0, 0.45, 0); add(g, G.rbox(0.22, 0.32, 0.4, 0.08), '#f2a541', 0, 1.12, 0, { cast: false }); face(g, 0.65, 0.36, 0.85); return 1.8; },
+  wbc(g, c) { add(g, G.sph(0.7, 20, 16), '#f6f7fb', 0, 0.85, 0); for (let i = 0; i < 9; i++) { const a = i * 2.4; add(g, G.sph(0.14, 8, 6), '#e8ebf4', Math.cos(a) * 0.62, 0.85 + Math.sin(i) * 0.45, Math.sin(a) * 0.5 - 0.1, { cast: false }); } add(g, G.sph(0.25, 10, 8), '#b39ad8', 0.3, 1.25, -0.2, { cast: false }); face(g, 0.95, 0.62, 1); return 2.0; },
+  paramecium(g, c) { const b = add(g, G.sph(0.62, 20, 16), c, 0, 0.95, 0, { sc: [0.78, 1.15, 0.62] }); add(g, G.sph(0.25, 10, 8), '#5fa84f', -0.22, 0.95, 0.3, { sc: [0.6, 1.2, 0.5] }); for (let i = 0; i < 22; i++) { const a = i / 22 * Math.PI * 2; add(g, G.cyl(0.015, 0.015, 0.18, 3), '#cfeebf', Math.cos(a) * 0.5, 0.95 + Math.sin(a) * 0.72, 0, { rz: a, cast: false }); } add(g, G.sph(0.12, 8, 6), '#bfe9ff', 0.1, 1.55, 0.2, { cast: false }); face(g, 1.1, 0.4, 0.95); return 2.1; },
+  yeast(g, c) { add(g, G.sph(0.65, 20, 16), c, 0, 0.7, 0); add(g, G.sph(0.32, 14, 10), c, 0.42, 1.3, -0.1); add(g, G.sph(0.16, 8, 6), '#c9a46a', -0.1, 0.65, 0.2, { cast: false }); add(g, G.cyl(0.42, 0.5, 0.25, 16), '#ffffff', 0, 0.55, 0.12, { sc: [1, 1, 0.6] }); face(g, 0.85, 0.56, 1); return 1.8; },
+  chloro(g, c) { add(g, G.cap(0.42, 0.7, 14), c, 0, 0.9, 0); for (let i = 0; i < 3; i++) add(g, G.cyl(0.18, 0.18, 0.18, 10), '#3f8d44', -0.15 + i * 0.15, 0.55 + i * 0.25, 0.32, { rx: Math.PI / 2, cast: false }); face(g, 1.15, 0.38, 0.9); return 1.9; },
+  divider(g, c) { add(g, G.sph(0.48, 18, 14), c, -0.38, 0.72, 0); add(g, G.sph(0.48, 18, 14), c, 0.38, 0.72, 0); const l = new THREE.Group(); l.position.x = -0.38; g.add(l); face(l, 0.8, 0.43, 0.8, 0.16); const r = new THREE.Group(); r.position.x = 0.38; g.add(r); face(r, 0.8, 0.43, 0.8, 0.16); return 1.5; },
+  rbc(g, c) { add(g, G.tor(0.42, 0.26, Math.PI * 2, 24), c, 0, 1.0, 0); add(g, G.cyl(0.42, 0.42, 0.22, 20), '#d84a4a', 0, 1.0, 0, { rx: Math.PI / 2 }); face(g, 1.08, 0.3, 0.85); add(g, G.cap(0.08, 0.3, 6), '#c24040', -0.18, 0.35, 0); add(g, G.cap(0.08, 0.3, 6), '#c24040', 0.18, 0.35, 0); return 1.9; },
+};
+
+// ---------- 裝飾：樹、花、石頭、雲 ----------
+const OBST = [];  // {x,z,r}
+function buildDecor() {
+  const ok = (x, z, pad) => {
+    const h = terrainH(x, z); if (h < 0.85 || slopeAt(x, z) > 0.45) return false;
+    if (pathDist(x, z) < 3.0) return false;
+    if (polyDist(x, z, RIVER) < 4) return false;
+    for (const p of POIS) if (Math.hypot(x - p.p[0], z - p.p[1]) < p.r + pad) return false;
+    for (const n of NPCS) if (Math.hypot(x - n.p[0], z - n.p[1]) < 2.5) return false;
+    for (const o of OBST) if (Math.hypot(x - o.x, z - o.z) < o.r + 2.2) return false;
+    if (x > -4 && x < 12 && z > 42) return false;
+    if (pathDist(x, z) < 3.4 && polyDist(x, z, PATHS[0].pts) < 4) return false;
+    return true;
+  };
+  const round = [], cedar = [], palms = [];
+  for (let i = 0; i < 2600 && round.length + cedar.length < 170; i++) {
+    const x = (rand() - 0.5) * 140, z = (rand() - 0.5) * 124;
+    if (!ok(x, z, 3.2)) continue;
+    const s = 0.8 + rand() * 0.5;
+    (rand() < 0.28 ? cedar : round).push([x, z, s]); OBST.push({ x, z, r: 0.7 * s });
+  }
+  for (let i = 0; i < 900 && palms.length < 26; i++) {
+    const x = (rand() - 0.5) * 150, z = (rand() - 0.5) * 140; const h = terrainH(x, z);
+    if (h < 0.4 || h > 0.75 || pathDist(x, z) < 2 || polyDist(x, z, RIVER) < 4 || Math.hypot(x - 4, z - 60) < 9) continue;
+    if (OBST.some(o => Math.hypot(x - o.x, z - o.z) < 4)) continue;
+    palms.push([x, z, 0.9 + rand() * 0.3]); OBST.push({ x, z, r: 0.45 });
+  }
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new V3(), SC = new V3(), C = new THREE.Color();
+  const inst = (geo, mat, list, place) => { const m = new THREE.InstancedMesh(geo, mat, list.length); list.forEach((it, i) => place(m, it, i)); m.castShadow = true; m.receiveShadow = true; scene.add(m); return m; };
+  const canopy = mergeGeos([xf(new THREE.SphereGeometry(1.25, 14, 10), { y: 2.7 }), xf(new THREE.SphereGeometry(0.95, 12, 9), { x: 0.75, y: 2.25, z: 0.3 }), xf(new THREE.SphereGeometry(0.95, 12, 9), { x: -0.7, y: 2.35, z: -0.25 }), xf(new THREE.SphereGeometry(0.8, 12, 9), { y: 3.5, z: 0.1 })]);
+  const trunk = new THREE.CylinderGeometry(0.2, 0.32, 2.0, 8).translate(0, 1.0, 0);
+  const greens = ['#5aac52', '#66b85a', '#4f9f4c', '#74c062', '#5eb46b'];
+  inst(trunk, toon('#9c7048'), round, (m, [x, z, s], i) => { Q.setFromAxisAngle(new V3(0, 1, 0), rand() * 6); m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z) - 0.1, z), Q, SC.set(s, s, s))); });
+  inst(canopy, toon('#ffffff'), round, (m, [x, z, s], i) => { Q.setFromAxisAngle(new V3(0, 1, 0), rand() * 6); m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z) - 0.1, z), Q, SC.set(s, s, s))); m.setColorAt(i, C.set(greens[i % greens.length])); });
+  const cedarG = mergeGeos([xf(new THREE.ConeGeometry(1.3, 2.0, 9), { y: 1.9 }), xf(new THREE.ConeGeometry(1.0, 1.7, 9), { y: 2.9 }), xf(new THREE.ConeGeometry(0.7, 1.4, 9), { y: 3.8 })]);
+  inst(trunk, toon('#8a6040'), cedar, (m, [x, z, s], i) => m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z) - 0.1, z), Q.identity(), SC.set(s, s * 0.7, s))));
+  inst(cedarG, toon('#ffffff'), cedar, (m, [x, z, s], i) => { m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z) - 0.1, z), Q.setFromAxisAngle(new V3(0, 1, 0), rand() * 6), SC.set(s, s, s))); m.setColorAt(i, C.set(['#3f8f5a', '#4a9a60', '#378553'][i % 3])); });
+  const palmT = mergeGeos(Array.from({ length: 5 }, (_, i) => xf(new THREE.CylinderGeometry(0.17 - i * 0.012, 0.2 - i * 0.012, 0.75, 8), { x: i * i * 0.04, y: 0.38 + i * 0.7, rz: -i * 0.06 })));
+  const palmL = mergeGeos(Array.from({ length: 6 }, (_, i) => xf(new THREE.SphereGeometry(1, 10, 6), { x: 1.0 + Math.cos(i / 6 * Math.PI * 2) * 1.1, y: 3.55, z: Math.sin(i / 6 * Math.PI * 2) * 1.1, ry: -i / 6 * Math.PI * 2, rz: -0.35, sx: 1.25, sy: 0.12, sz: 0.38 })));
+  inst(palmT, toon('#b98a5a'), palms, (m, [x, z, s], i) => m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z) - 0.1, z), Q.setFromAxisAngle(new V3(0, 1, 0), i * 1.7), SC.set(s, s, s))));
+  inst(palmL, toon('#5cb85a'), palms, (m, [x, z, s], i) => m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z) - 0.1, z), Q.setFromAxisAngle(new V3(0, 1, 0), i * 1.7), SC.set(s, s, s))));
+  // 花
+  const flowers = [];
+  for (let i = 0; i < 2500 && flowers.length < 420; i++) {
+    const x = (rand() - 0.5) * 140, z = (rand() - 0.5) * 124; const h = terrainH(x, z);
+    if (h < 0.9 || slopeAt(x, z) > 0.4 || pathDist(x, z) < 1.8 || POIS.some(p => Math.hypot(x - p.p[0], z - p.p[1]) < p.r + 0.6)) continue;
+    const cx = x, cz = z; const col = ['#ff8fa8', '#ffffff', '#ffd84d', '#c48df0', '#ff7a6b', '#8fc7ff'][(rand() * 6) | 0];
+    for (let k = 0; k < 4; k++) flowers.push([cx + (rand() - 0.5) * 1.4, cz + (rand() - 0.5) * 1.4, col]);
+  }
+  const flowerG = mergeGeos([xf(new THREE.SphereGeometry(0.13, 6, 5), { y: 0.3 }), ...Array.from({ length: 5 }, (_, i) => xf(new THREE.SphereGeometry(0.12, 6, 5), { x: Math.cos(i * 1.256) * 0.15, y: 0.28, z: Math.sin(i * 1.256) * 0.15, sy: 0.5 }))]);
+  inst(flowerG, toon('#ffffff'), flowers, (m, [x, z, c], i) => { m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z), z), Q.identity(), SC.set(1, 1, 1))); m.setColorAt(i, C.set(c)); }).castShadow = false;
+  const stems = inst(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4).translate(0, 0.15, 0), toon('#4f9a4a'), flowers, (m, [x, z], i) => m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z), z), Q.identity(), SC.set(1, 1, 1))));
+  stems.castShadow = false;
+  // 石頭與貝殼
+  const rocks = [], shells = [];
+  for (let i = 0; i < 1500 && (rocks.length < 40 || shells.length < 40); i++) {
+    const x = (rand() - 0.5) * 150, z = (rand() - 0.5) * 140; const h = terrainH(x, z);
+    if (pathDist(x, z) < 1.8 || POIS.some(p => Math.hypot(x - p.p[0], z - p.p[1]) < p.r + 1) || polyDist(x, z, RIVER) < 3.2) continue;
+    if (h > 0.35 && h < 0.7 && shells.length < 40) shells.push([x, z, rand()]);
+    else if (h > 0.9 && rocks.length < 40 && slopeAt(x, z) < 0.4 && rand() < 0.3) { rocks.push([x, z, 0.5 + rand() * 0.6]); }
+  }
+  inst(new THREE.DodecahedronGeometry(0.6, 0), toon('#b9b5aa'), rocks, (m, [x, z, s], i) => m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z) + 0.1, z), Q.setFromEuler(new THREE.Euler(rand(), rand() * 6, rand())), SC.set(s, s * 0.7, s))));
+  inst(new THREE.ConeGeometry(0.16, 0.28, 6).rotateX(Math.PI / 2), toon('#ffffff'), shells, (m, [x, z, r], i) => { m.setMatrixAt(i, M.compose(P.set(x, terrainH(x, z) + 0.05, z), Q.setFromAxisAngle(new V3(0, 1, 0), r * 6), SC.set(1, 0.5, 1))); m.setColorAt(i, C.set(['#ffd0d6', '#fff3e0', '#ffe2b8', '#e9e0ff'][i % 4])); }).castShadow = false;
+  // 雲
+  for (let i = 0; i < 9; i++) {
+    const c = new THREE.Group(); const a = i / 9 * Math.PI * 2; c.position.set(Math.cos(a) * (70 + rand() * 40), 34 + rand() * 10, Math.sin(a) * (60 + rand() * 40)); scene.add(c);
+    for (let k = 0; k < 5; k++) add(c, G.sph(2.2 + rand() * 1.6, 12, 10), basic('#ffffff', { transparent: true, opacity: 0.92 }), k * 2.4 - 5, rand() * 1.2, (rand() - 0.5) * 2, { sc: [1, 0.7, 1], cast: false });
+    const sp = 0.4 + rand() * 0.6; animators.push((t, dt) => { c.position.x += dt * sp; if (c.position.x > 130) c.position.x = -130; });
+  }
+}
+
+// ---------- 地標與 NPC 放置 ----------
+const POI_OBJ = new Map(), NPC_OBJ = new Map();
+function baseY(x, z, r) { let m = terrainH(x, z); for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; m = Math.min(m, terrainH(x + Math.cos(a) * r * 0.5, z + Math.sin(a) * r * 0.5)); } return Math.max(m, terrainH(x, z) - 0.25); }
+function buildPOIs() {
+  for (const poi of POIS) {
+    const g = new THREE.Group(); const [x, z] = poi.p;
+    g.position.set(x, poi.pond ? terrainH(x + poi.r + 0.8, z) - 0.3 : baseY(x, z, poi.r), z);
+    g.rotation.y = Math.atan2(poi.face[0] - x, poi.face[1] - z);
+    const top = BUILD[poi.kind](g, poi);
+    poi.top = (top || 4) + 0.6;
+    scene.add(g); POI_OBJ.set(poi.id, g);
+    if (!poi.pond) OBST.push({ x, z, r: poi.r * 0.82, poi: poi.id });
+  }
+  for (const n of NPCS) {
+    const g = new THREE.Group(); const [x, z] = n.p; g.position.set(x, terrainH(x, z), z);
+    n.top = NPC_BUILD[n.kind](g, n.color) + 0.5;
+    scene.add(g); NPC_OBJ.set(n.id, g); OBST.push({ x, z, r: 0.6 });
+    n.y0 = g.position.y; n.ph = rand() * 6;
+  }
+  // 碼頭的歡迎看板
+  const w = new THREE.Group(); w.position.set(-1.4, terrainH(-1.4, 50), 50); w.rotation.y = 0.3; scene.add(w);
+  for (const s of [-1, 1]) add(w, G.cyl(0.12, 0.14, 2.4, 8), PAL.woodD, s * 1.5, 1.2, 0);
+  add(w, G.rbox(3.6, 1.7, 0.2, 0.1), PAL.wood, 0, 2.5, 0);
+  add(w, G.plane(3.3, 1.4), texMat(textTex(['歡迎來到', '養分快遞島'], { w: 512, h: 220, size: [58, 80], bg: '#fff4d8', border: '#e07aa0' })), 0, 2.5, 0.11, { cast: false });
+  OBST.push({ x: -1.4, z: 50, r: 1.0 });
+}
+
+// ================= 遊戲：狀態、角色、鏡頭、操作、介面 =================
+const ZMAP = Object.fromEntries(ZONES.map((z) => [z.id, z]));
+const PMAP = Object.fromEntries(POIS.map((p) => [p.id, p]));
+const NMAP = Object.fromEntries(NPCS.map((n) => [n.id, n]));
+const GAME_NAMES = Object.fromEntries(Object.entries(GAMES).map(([k, v]) => [k, v.name]));
+const STORE_KEY = ISLAND.key;
+let state = { atp: 0, visited: {}, solved: {}, games: {}, badges: {}, name: '', sound: true, seenGuide: false };
+function loadState() { try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s) state = { ...state, ...s }; } catch (e) { /* 無法讀取就用預設 */ } }
+function saveState() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) { /* 無法儲存也能玩 */ } }
+const qKey = (p, i) => p.id + '#' + i;
+const poiDone = (p) => p.quiz.every((_, i) => state.solved[qKey(p, i)]);
+const zoneDone = (zid) => POIS.filter((p) => p.zone === zid).every(poiDone);
+const doneCount = () => POIS.filter(poiDone).length;
+const strip = (h) => h.replace(/<[^>]+>/g, '');
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- 音效 ----------
+let actx = null, gestured = false;
+for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => { gestured = true; }, { capture: true });
+function audio() { if (!state.sound || !gestured) return null; try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) { actx = null; } return actx; }
+function tone(f, dur = 0.06, type = 'sine', vol = 0.05, when = 0) {
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.value = f;
+  const t = a.currentTime + when; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.03);
+}
+const sfx = {
+  blip: () => tone(560 + Math.random() * 280, 0.045, 'triangle', 0.025),
+  pop: () => { tone(660, 0.07, 'sine', 0.05); tone(990, 0.09, 'sine', 0.04, 0.06); },
+  good: () => [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.18, 'triangle', 0.045, i * 0.08)),
+  bad: () => { tone(260, 0.12, 'triangle', 0.04); tone(200, 0.16, 'triangle', 0.035, 0.1); },
+  coin: () => { tone(1320, 0.06, 'square', 0.02); tone(1760, 0.12, 'square', 0.018, 0.05); },
+};
+
+// ---------- 角色 ----------
+const player = makePlayer(); scene.add(player);
+const P = { x: 4, z: 50, target: null, goal: null, goalR: 0, speed: 7.4, stuck: 0, moving: false, walkT: 0 };
+player.position.set(P.x, 1, P.z); player.rotation.y = 0;
+const angLerp = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
+
+let OGRID = new Map();
+function buildObstGrid() { OGRID = new Map(); for (const o of OBST) { const k = `${Math.floor(o.x / 4)},${Math.floor(o.z / 4)}`; if (!OGRID.has(k)) OGRID.set(k, []); OGRID.get(k).push(o); } }
+function nearObst(x, z) { const ix = Math.floor(x / 4), iz = Math.floor(z / 4), out = []; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = OGRID.get(`${ix + a},${iz + b}`); if (l) out.push(...l); } return out; }
+function angNear(a, list, half) { return list.some((g) => Math.abs(Math.atan2(Math.sin(a - g), Math.cos(a - g))) < half); }
+function terrainOK(x, z) {
+  if (onBridge(x, z) || onPier(x, z)) return true;
+  const h = terrainH(x, z); if (h < 0.12 || slopeAt(x, z) > 1.1) return false;
+  return true;
+}
+function canStand(x, z, ignore) {
+  if (!terrainOK(x, z)) return false;
+  for (const o of nearObst(x, z)) if (o !== ignore && Math.hypot(x - o.x, z - o.z) < o.r + 0.38) return false;
+  return true;
+}
+function lineClear(x0, z0, x1, z1, stopR) {
+  const L = Math.hypot(x1 - x0, z1 - z0); const n = Math.ceil(L / 0.7);
+  for (let i = 1; i <= n; i++) { const t = i / n; const x = lerp(x0, x1, t), z = lerp(z0, z1, t); if (Math.hypot(x1 - x, z1 - z) < stopR) return true; if (!terrainOK(x, z)) return false; }
+  return true;
+}
+function tryMove(dx, dz) {
+  const nx = P.x + dx, nz = P.z + dz;
+  if (canStand(nx, nz)) { P.x = nx; P.z = nz; return true; }
+  if (Math.abs(dx) > 1e-4 && canStand(nx, P.z)) { P.x = nx; return true; }
+  if (Math.abs(dz) > 1e-4 && canStand(P.x, nz)) { P.z = nz; return true; }
+  return false;
+}
+const keys = {};
+function updatePlayer(dt) {
+  let mx = 0, mz = 0;
+  const kx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), kf = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+  if ((kx || kf) && cam.mode === 'follow' && !modalOpen()) {
+    P.target = null; P.goal = null;
+    mx = Math.cos(cam.yaw) * kx - Math.sin(cam.yaw) * kf; mz = -Math.sin(cam.yaw) * kx - Math.cos(cam.yaw) * kf;
+  } else if (P.target) {
+    const dx = P.target[0] - P.x, dz = P.target[1] - P.z, d = Math.hypot(dx, dz);
+    if (d < (P.goal ? P.goalR : 0.3)) arrived(); else { mx = dx / d; mz = dz / d; }
+  }
+  const len = Math.hypot(mx, mz);
+  if (len > 0.01) {
+    mx /= len; mz /= len;
+    const step = Math.min(P.speed * dt, P.target && !P.goal ? Math.hypot(P.target[0] - P.x, P.target[1] - P.z) : 9);
+    if (tryMove(mx * step, mz * step)) P.stuck = 0; else { P.stuck += dt; if (P.stuck > 0.5 && P.target) { P.stuck = 0; if (P.goal) teleportGoal(); else P.target = null; } }
+    player.rotation.y = angLerp(player.rotation.y, Math.atan2(mx, mz), 1 - Math.exp(-dt * 14));
+    P.moving = true;
+  } else P.moving = false;
+  const gy = groundH(P.x, P.z);
+  player.position.set(P.x, lerp(player.position.y, gy, 1 - Math.exp(-dt * 18)), P.z);
+  const u = player.userData;
+  P.walkT += dt * (P.moving ? 11 : 0);
+  const sw = P.moving && !REDUCED ? Math.sin(P.walkT) : 0;
+  u.legs[0].rotation.x = sw * 0.7; u.legs[1].rotation.x = -sw * 0.7;
+  u.arms[0].rotation.x = -sw * 0.6; u.arms[1].rotation.x = sw * 0.6;
+  u.body.position.y = P.moving && !REDUCED ? Math.abs(Math.sin(P.walkT)) * 0.09 : 0;
+  if (P.moving && Math.sin(P.walkT) * Math.sin(P.walkT - dt * 11) < 0) { dust(P.x, P.z); }
+}
+function arrived() {
+  const g = P.goal; P.target = null; P.goal = null;
+  if (!g) return;
+  if (g.type === 'poi') { const p = PMAP[g.id]; faceTo(p.p[0], p.p[1]); openCard(p); }
+  if (g.type === 'npc') { const n = NMAP[g.id]; faceTo(n.p[0], n.p[1]); talkTo(n); }
+}
+function faceTo(x, z) { player.rotation.y = Math.atan2(x - P.x, z - P.z); }
+function teleportGoal() { const g = P.goal; if (!g) return; if (g.type === 'poi') travelTo(PMAP[g.id]); else { const n = NMAP[g.id]; placeNear(n.p, 1.6); arrived(); } }
+
+// ---------- 鏡頭 ----------
+const cam = { mode: 'intro', yaw: 0.35, pitch: 0.8, dist: 27, cyaw: 0.35, cpitch: 1.0, cdist: 170, ctx: -2, cty: 0, ctz: 2, ov: 160 };
+function updateCamera(dt) {
+  let tx, ty, tz, pitch, dist;
+  if (cam.mode === 'follow') { tx = P.x; tz = P.z; ty = player.position.y + 1.1; pitch = cam.pitch; dist = cam.dist; }
+  else { tx = -4; tz = -2; ty = 0; pitch = 1.0; dist = cam.ov; if (cam.mode === 'intro' && !REDUCED && !introDrag) cam.yaw += dt * 0.05; }
+  const k = REDUCED ? 1 : 1 - Math.exp(-dt * (cam.mode === 'follow' ? 6.5 : 2.4));
+  cam.ctx = lerp(cam.ctx, tx, k); cam.cty = lerp(cam.cty, ty, k); cam.ctz = lerp(cam.ctz, tz, k);
+  cam.cyaw = angLerp(cam.cyaw, cam.yaw, REDUCED ? 1 : 1 - Math.exp(-dt * 9)); cam.cpitch = lerp(cam.cpitch, pitch, k); cam.cdist = lerp(cam.cdist, dist, k);
+  const cp = Math.cos(cam.cpitch);
+  camera.position.set(cam.ctx + Math.sin(cam.cyaw) * cp * cam.cdist, cam.cty + Math.sin(cam.cpitch) * cam.cdist, cam.ctz + Math.cos(cam.cyaw) * cp * cam.cdist);
+  camera.lookAt(cam.ctx, cam.cty, cam.ctz);
+  camera.updateMatrixWorld();
+  BEND.d.value = cam.cdist * 0.9;
+  BEND.k.value = lerp(BEND.k.value, cam.mode === 'follow' ? 0.0045 : 0, REDUCED ? 1 : 1 - Math.exp(-dt * 3));
+  scene.fog.near = Math.max(80, cam.cdist * 0.95); scene.fog.far = Math.max(230, cam.cdist * 2.3);
+  setShadowSpan(cam.cdist > 60 ? 95 : 44);
+  sun.position.set(cam.ctx + SUN_DIR.x * 100, SUN_DIR.y * 100, cam.ctz + SUN_DIR.z * 100);
+  sun.target.position.set(cam.ctx, 0, cam.ctz); sun.target.updateMatrixWorld();
+}
+function setMode(m) {
+  cam.mode = m;
+  document.body.dataset.mode = m;
+  $('#btnView .t').textContent = m === 'follow' ? '俯瞰全島' : '回到角色';
+  if (m !== 'follow') closeCard();
+}
+
+// ---------- 投影與點選 ----------
+const _v = new V3();
+function projectBent(x, y, z) {
+  _v.set(x, y, z).applyMatrix4(camera.matrixWorldInverse);
+  const depth = -_v.z; const bz = Math.max(0, depth - BEND.d.value); _v.y -= BEND.k.value * bz * bz;
+  _v.applyMatrix4(camera.projectionMatrix);
+  return { x: _v.x, y: _v.y, depth, ok: depth > 0.5 && Math.abs(_v.x) < 1.3 && Math.abs(_v.y) < 1.3 };
+}
+const ray = new THREE.Raycaster();
+function rayGround(nx, ny) {
+  ray.setFromCamera({ x: nx, y: ny }, camera);
+  const o = ray.ray.origin, d = ray.ray.direction; let prev = 0;
+  for (let t = 0.5; t < 500; t += 0.6) {
+    const x = o.x + d.x * t, y = o.y + d.y * t, z = o.z + d.z * t;
+    if (y < Math.max(groundH(x, z), 0)) { let a = prev, b = t; for (let k = 0; k < 10; k++) { const m = (a + b) / 2; const yy = o.y + d.y * m, xx = o.x + d.x * m, zz = o.z + d.z * m; (yy < Math.max(groundH(xx, zz), 0)) ? b = m : a = m; } return new V3(o.x + d.x * b, 0, o.z + d.z * b); }
+    prev = t;
+  }
+  return null;
+}
+function pickGround(nx, ny) {
+  let gx = nx, gy = ny, p = null;
+  for (let i = 0; i < 4; i++) { p = rayGround(gx, gy); if (!p) return null; const s = projectBent(p.x, groundH(p.x, p.z), p.z); gx += nx - s.x; gy += ny - s.y; }
+  return p;
+}
+function pickThing(nx, ny) {
+  const W = renderer.domElement.clientWidth, H = renderer.domElement.clientHeight; const f = H / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  let best = null, bestD = 1e9;
+  const test = (x, y, z, r, item) => {
+    const s = projectBent(x, y, z); if (!s.ok) return;
+    const dx = (s.x - nx) * W / 2, dy = (s.y - ny) * H / 2; const rp = r * f / s.depth;
+    if (Math.hypot(dx, dy) < rp && s.depth < bestD) { bestD = s.depth; best = item; }
+  };
+  for (const p of POIS) { const g = POI_OBJ.get(p.id); test(p.p[0], g.position.y + Math.min(p.top * 0.45, 2.6), p.p[1], p.r * 0.9, { type: 'poi', id: p.id }); }
+  for (const n of NPCS) { const g = NPC_OBJ.get(n.id); test(n.p[0], g.position.y + 1, n.p[1], 1.0, { type: 'npc', id: n.id }); }
+  return best;
+}
+
+// ---------- 輸入 ----------
+const cv = renderer.domElement;
+const ptrs = new Map(); let drag = null, pinch = null, introDrag = false;
+cv.addEventListener('pointerdown', (e) => {
+  audio();
+  cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false };
+  else if (ptrs.size === 2) { drag = null; const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.mode === 'follow' ? cam.dist : cam.ov }; }
+});
+cv.addEventListener('pointermove', (e) => {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 2 && pinch) { const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); const nd = clamp(pinch.dist * pinch.d / Math.max(d, 1), 12, cam.mode === 'follow' ? 60 : 380); if (cam.mode === 'follow') cam.dist = nd; else cam.ov = Math.max(nd, 90); return; }
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 7) drag.moved = true;
+  if (drag.moved) { cam.yaw -= dx * 0.0055; if (cam.mode === 'follow') cam.pitch = clamp(cam.pitch + dy * 0.004, 0.45, 1.3); introDrag = true; }
+});
+const endPtr = (e) => {
+  if (drag && !drag.moved && ptrs.size === 1) onTap(e.clientX, e.clientY);
+  ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (ptrs.size === 0) { drag = null; introDrag = false; }
+};
+cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', (e) => { ptrs.delete(e.pointerId); drag = null; pinch = null; });
+cv.addEventListener('wheel', (e) => { e.preventDefault(); const f = 1 + clamp(e.deltaY, -120, 120) * 0.0012; if (cam.mode === 'follow') cam.dist = clamp(cam.dist * f, 12, 60); else cam.ov = clamp(cam.ov * f, 90, 380); }, { passive: false });
+function onTap(cx, cy) {
+  const r = cv.getBoundingClientRect(); const nx = (cx - r.left) / r.width * 2 - 1, ny = -((cy - r.top) / r.height * 2 - 1);
+  if (cam.mode === 'intro') return;
+  hideHint();
+  const thing = pickThing(nx, ny);
+  if (cam.mode === 'overview') { if (thing?.type === 'poi') travelTo(PMAP[thing.id]); return; }
+  if (thing) { thing.type === 'poi' ? selectPoi(PMAP[thing.id]) : selectNpc(NMAP[thing.id]); return; }
+  const g = pickGround(nx, ny); if (!g) return;
+  P.goal = null; P.target = [g.x, g.z]; ring(g.x, g.z); sfx.blip();
+}
+const KEYMAP = { arrowup: 'up', w: 'up', arrowdown: 'down', s: 'down', arrowleft: 'left', a: 'left', arrowright: 'right', d: 'right' };
+addEventListener('keydown', (e) => {
+  if (e.target.closest && e.target.closest('input, textarea, select')) { if (e.key === 'Escape') closeModal(); return; }
+  const k = e.key.toLowerCase();
+  if (KEYMAP[k]) { keys[KEYMAP[k]] = true; if (k.startsWith('arrow') && cam.mode === 'follow' && !modalOpen()) e.preventDefault(); hideHint(); return; }
+  if (k === 'escape') { if (!$('#dialog').hidden) closeDialog(); else if (modalOpen()) closeModal(); else closeCard(); }
+  if ((k === 'e' || k === 'enter') && !modalOpen() && cam.mode === 'follow' && document.activeElement === document.body) {
+    if (!$('#dialog').hidden) { advanceDialog(); return; }
+    if (nearPoi) openCard(nearPoi); else if (nearNpc) talkTo(nearNpc);
+  }
+  if (k === 'm' && !modalOpen()) openMap();
+  if (k === '/' && !modalOpen()) { e.preventDefault(); openSearch(); }
+});
+addEventListener('keyup', (e) => { const k = KEYMAP[e.key.toLowerCase()]; if (k) keys[k] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+// ---------- 小特效：點擊圈、腳步塵、瞬移煙 ----------
+const fx = [];
+function ring(x, z) {
+  const m = new THREE.Mesh(G.tor(0.6, 0.07, Math.PI * 2, 32), basic('#ffffff', { transparent: true, opacity: 0.9 }));
+  m.rotation.x = Math.PI / 2; m.position.set(x, groundH(x, z) + 0.08, z); scene.add(m);
+  fx.push({ m, t: 0, life: 0.6, up: (s) => { m.scale.setScalar(0.6 + s * 0.8); m.material.opacity = 0.9 * (1 - s); } });
+}
+function dust(x, z) {
+  if (REDUCED) return;
+  const m = new THREE.Mesh(G.sph(0.18, 8, 6), basic('#fffaf0', { transparent: true, opacity: 0.8 }));
+  m.position.set(x + (Math.random() - 0.5) * 0.3, groundH(x, z) + 0.1, z + (Math.random() - 0.5) * 0.3); scene.add(m);
+  fx.push({ m, t: 0, life: 0.45, up: (s) => { m.scale.setScalar(1 + s * 1.5); m.position.y += 0.01; m.material.opacity = 0.7 * (1 - s); } });
+}
+function poof(x, z) {
+  for (let i = 0; i < 8; i++) {
+    const m = new THREE.Mesh(G.sph(0.35, 10, 8), basic('#ffffff', { transparent: true, opacity: 0.9 }));
+    const a = i / 8 * Math.PI * 2; const y = groundH(x, z) + 0.8; m.position.set(x, y, z); scene.add(m);
+    fx.push({ m, t: 0, life: 0.6, up: (s) => { m.position.set(x + Math.cos(a) * s * 1.6, y + s * 0.8, z + Math.sin(a) * s * 1.6); m.scale.setScalar(1 + s); m.material.opacity = 0.9 * (1 - s); } });
+  }
+}
+function updateFx(dt) {
+  for (let i = fx.length - 1; i >= 0; i--) { const f = fx[i]; f.t += dt; const s = Math.min(1, f.t / f.life); f.up(s); if (s >= 1) { scene.remove(f.m); f.m.material.dispose(); fx.splice(i, 1); } }
+}
+
+// ---------- NPC ----------
+let nearPoi = null, nearNpc = null;
+function updateNPCs(dt, t) {
+  for (const n of NPCS) {
+    const g = NPC_OBJ.get(n.id); if (!REDUCED) g.position.y = n.y0 + Math.abs(Math.sin(t * 2.2 + n.ph)) * 0.12;
+    const d = Math.hypot(P.x - n.p[0], P.z - n.p[1]);
+    const want = d < 9 ? Math.atan2(P.x - n.p[0], P.z - n.p[1]) : Math.sin(t * 0.4 + n.ph) * 0.6;
+    g.rotation.y = angLerp(g.rotation.y, want, 1 - Math.exp(-dt * 4));
+  }
+}
+function placeNear(pt, r) {
+  for (let k = 0; k < 24; k++) { const a = k * 0.55 + Math.PI / 2; const x = pt[0] + Math.cos(a) * (r + (k > 12 ? 1 : 0)), z = pt[1] + Math.sin(a) * (r + (k > 12 ? 1 : 0)); if (canStand(x, z)) { poof(P.x, P.z); P.x = x; P.z = z; player.position.y = groundH(x, z); poof(x, z); return; } }
+}
+function selectNpc(n) {
+  if (cam.mode !== 'follow') setMode('follow');
+  const d = Math.hypot(P.x - n.p[0], P.z - n.p[1]);
+  if (d < 2.4) { faceTo(n.p[0], n.p[1]); talkTo(n); return; }
+  if (d < 46 && lineClear(P.x, P.z, n.p[0], n.p[1], 2)) { P.target = [n.p[0], n.p[1]]; P.goal = { type: 'npc', id: n.id }; P.goalR = 2.0; }
+  else { placeNear(n.p, 1.8); faceTo(n.p[0], n.p[1]); talkTo(n); }
+}
+function talkTo(n) {
+  const actions = n.game ? [{ label: GAME_NAMES[n.game], fn: () => openGame(n.game) }] : [];
+  if (n.id === 'guide') actions.push({ label: '打開島嶼地圖', fn: openMap });
+  showDialog({ name: n.name, sub: n.role, color: n.color, lines: n.lines, actions });
+}
+
+// ---------- 地標選取與移動 ----------
+function approachPoint(p) {
+  const [x, z] = p.p; let fx2 = p.face[0] - x, fz2 = p.face[1] - z; const L = Math.hypot(fx2, fz2) || 1; fx2 /= L; fz2 /= L;
+  const d = p.r * 0.82 + 1.3;
+  for (let k = 0; k < 18; k++) {
+    const a = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.35; const c = Math.cos(a), s = Math.sin(a);
+    const ax = fx2 * c - fz2 * s, az = fx2 * s + fz2 * c;
+    for (const dd of [d, d + 1.2, d + 2.6]) { const px = x + ax * dd, pz = z + az * dd; if (canStand(px, pz)) return [px, pz]; }
+  }
+  return [x + fx2 * d, z + fz2 * d];
+}
+function travelTo(p, open = true) {
+  closeModal(); closeDialog();
+  const [ax, az] = approachPoint(p);
+  poof(P.x, P.z); P.x = ax; P.z = az; player.position.y = groundH(ax, az); poof(ax, az); sfx.pop();
+  P.target = null; P.goal = null; faceTo(p.p[0], p.p[1]);
+  if (cam.mode !== 'follow') setMode('follow');
+  cam.yaw = Math.atan2(ax - p.p[0], az - p.p[1]);
+  if (open) setTimeout(() => openCard(p), REDUCED ? 0 : 420);
+}
+function selectPoi(p) {
+  if (cam.mode !== 'follow') { travelTo(p); return; }
+  const d = Math.hypot(P.x - p.p[0], P.z - p.p[1]); const reach = p.r * 0.82 + 1.7;
+  if (d < reach) { faceTo(p.p[0], p.p[1]); openCard(p); return; }
+  if (d < 46 && lineClear(P.x, P.z, p.p[0], p.p[1], reach)) { P.target = [p.p[0], p.p[1]]; P.goal = { type: 'poi', id: p.id }; P.goalR = reach - 0.2; sfx.blip(); }
+  else travelTo(p);
+}
+
+// ---------- 名牌 ----------
+const labelsEl = $('#labels'); const LBL = [];
+function buildLabels() {
+  for (const p of POIS) {
+    const b = document.createElement('button'); b.className = 'lbl'; b.type = 'button';
+    b.style.setProperty('--zc', ZMAP[p.zone].color);
+    b.innerHTML = `<span class="dot" aria-hidden="true"></span><span class="t">${esc(p.name)}</span><span class="st" aria-hidden="true"></span><span class="go">點我看重點</span>`;
+    b.setAttribute('aria-label', `${p.name}，${ZMAP[p.zone].code} ${ZMAP[p.zone].name}`);
+    b.addEventListener('click', () => { hideHint(); selectPoi(p); });
+    labelsEl.append(b); LBL.push({ el: b, kind: 'poi', item: p, x: p.p[0], z: p.p[1], y: () => POI_OBJ.get(p.id).position.y + p.top });
+  }
+  for (const n of NPCS) {
+    const b = document.createElement('button'); b.className = 'lbl npc'; b.type = 'button'; b.style.setProperty('--zc', n.color);
+    b.innerHTML = `<span class="bub" aria-hidden="true">…</span><span class="t">${esc(n.name)}</span>`;
+    b.setAttribute('aria-label', `和${n.name}（${n.role}）說話`);
+    b.addEventListener('click', () => selectNpc(n));
+    labelsEl.append(b); LBL.push({ el: b, kind: 'npc', item: n, x: n.p[0], z: n.p[1], y: () => NPC_OBJ.get(n.id).position.y + n.top });
+  }
+  for (const z of ZONES) {
+    const b = document.createElement('button'); b.className = 'zlbl'; b.type = 'button'; b.style.setProperty('--zc', z.color);
+    b.innerHTML = `<b>${z.code}</b> ${esc(z.name)}<small>${esc(z.sub)}</small>`;
+    b.addEventListener('click', () => { const first = POIS.find((p) => p.zone === z.id); travelTo(first, false); });
+    labelsEl.append(b); LBL.push({ el: b, kind: 'zone', item: z, x: z.center[0], z: z.center[1], y: () => 10 });
+  }
+}
+function updateLabels() {
+  const W = cv.clientWidth, H = cv.clientHeight; const follow = cam.mode === 'follow';
+  let np = null, npd = 1e9, nn = null, nnd = 1e9;
+  if (follow) {
+    for (const p of POIS) { const d = Math.hypot(P.x - p.p[0], P.z - p.p[1]) - p.r * 0.82; if (d < 3.4 && d < npd) { npd = d; np = p; } }
+    for (const n of NPCS) { const d = Math.hypot(P.x - n.p[0], P.z - n.p[1]); if (d < 3.2 && d < nnd) { nnd = d; nn = n; } }
+  }
+  nearPoi = np; nearNpc = nn;
+  for (const L of LBL) {
+    let show;
+    if (L.kind === 'zone') show = !follow;
+    else if (!follow) show = L.kind === 'poi';
+    else show = Math.hypot(L.x - cam.ctx, L.z - cam.ctz) < 44;
+    if (show) {
+      const s = projectBent(L.x, L.y(), L.z);
+      if (!s.ok) show = false;
+      else {
+        const sx = (s.x + 1) / 2 * W, sy = (1 - s.y) / 2 * H;
+        L.el.style.transform = `translate3d(${sx.toFixed(1)}px, ${sy.toFixed(1)}px, 0) translate(-50%, -100%)`;
+        L.el.style.zIndex = String(1000 - Math.round(s.depth));
+      }
+    }
+    if (L.el.hidden === show) L.el.hidden = !show;
+    if (L.kind === 'poi') {
+      L.el.classList.toggle('tiny', !follow);
+      L.el.classList.toggle('near', L.item === np);
+    }
+    if (L.kind === 'npc') L.el.classList.toggle('near', L.item === nn);
+  }
+}
+function refreshLabelStates() {
+  for (const L of LBL) if (L.kind === 'poi') { L.el.classList.toggle('done', poiDone(L.item)); L.el.classList.toggle('seen', !!state.visited[L.item.id]); }
+}
+
+// ---------- 區域橫幅 ----------
+let curZone = null, zoneTimer = 0;
+function updateZone(dt) {
+  if (cam.mode !== 'follow') return;
+  let best = null, bd = 15;
+  for (const p of POIS) { const d = Math.hypot(P.x - p.p[0], P.z - p.p[1]); if (d < bd) { bd = d; best = p.zone; } }
+  if (best && best !== curZone) {
+    zoneTimer += dt;
+    if (zoneTimer > 0.4) { curZone = best; zoneTimer = 0; const z = ZMAP[best]; const el = $('#zoneBanner'); el.style.setProperty('--zc', z.color); el.innerHTML = `<b>${z.code}</b><span>${esc(z.name)}</span><small>${esc(z.sub)}</small>`; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
+  } else zoneTimer = 0;
+}
+
+// ---------- HUD、提示 ----------
+function updateHud(bump) {
+  $('#atpN').textContent = state.atp;
+  const d = doneCount(); $('#progN').textContent = `${d} / ${POIS.length}`;
+  $('#progBar').style.width = (d / POIS.length * 100).toFixed(1) + '%';
+  $('#badgeRow').innerHTML = ZONES.map((z) => `<span class="mini-badge${state.badges[z.id] ? ' on' : ''}" style="--zc:${z.color}" title="${esc(BADGE[z.id])}">${BADGE_ICON[z.id]}</span>`).join('');
+  if (bump) { const a = $('#atp'); a.classList.remove('bump'); void a.offsetWidth; a.classList.add('bump'); }
+  refreshLabelStates();
+}
+function toast(html, cls = '') {
+  const t = document.createElement('div'); t.className = 'toast ' + cls; t.innerHTML = html; $('#toasts').append(t);
+  setTimeout(() => t.classList.add('out'), 2300); setTimeout(() => t.remove(), 2800);
+}
+function gainATP(n, why) { if (n <= 0) return; state.atp += n; saveState(); updateHud(true); sfx.coin(); toast(`<b>+${n} ATP</b> ${esc(why)}`, 'atp'); }
+function hideHint() { const h = $('#hint'); if (h && !h.hidden) h.classList.add('fade'); }
+
+// ---------- 資訊卡 ----------
+let current = null; const tries = {};
+function qOrder(key, n) { let h = 7; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) | 0; const r = mulberry32(h); const a = [...Array(n).keys()]; for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const panel = $('#panel');
+function cardHTML(p) {
+  const z = ZMAP[p.zone]; const sep = p.flowSep || '→';
+  const flow = p.flow ? `<div class="flow" aria-label="流程">${p.flow.map((f) => `<span>${f}</span>`).join(`<i aria-hidden="true">${sep}</i>`)}</div>` : '';
+  const quiz = p.quiz.map((q, i) => {
+    const ok = !!state.solved[qKey(p, i)];
+    return `<div class="qblk${ok ? ' solved' : ''}" data-q="${i}">
+      <div class="qh"><span>小測驗 ${p.quiz.length > 1 ? `${i + 1}／${p.quiz.length}` : ''}</span>${ok ? '<span class="okchip">已答對</span>' : '<span class="reward">答對 +3 ATP</span>'}</div>
+      <p class="qq">${q.q}</p>
+      <div class="opts">${qOrder(qKey(p, i), q.o.length).map((j, pos) => `<button type="button" class="opt${ok && j === q.a ? ' right' : ''}" data-act="ans" data-q="${i}" data-o="${j}"${ok ? ' disabled' : ''}><b>${'ABCD'[pos]}</b><span>${q.o[j]}</span></button>`).join('')}</div>
+      <div class="fb" aria-live="polite">${ok ? `<p>${q.ex}</p>` : ''}</div></div>`;
+  }).join('');
+  return `<button type="button" class="x" data-act="close" aria-label="關閉卡片">×</button>
+    <div class="chip" style="--zc:${z.color}">${z.code}・${esc(z.name)}<span>${esc(z.sub)}</span></div>
+    <h2>${esc(p.name)}</h2>
+    <p class="place">${p.place}</p>
+    ${flow}
+    <ul class="pts">${p.pts.map((t) => `<li>${t}</li>`).join('')}</ul>
+    ${p.tip ? `<div class="tip"><b>考試小提醒</b><p>${p.tip}</p></div>` : ''}
+    <section class="quiz">${quiz}</section>
+    ${p.game ? `<button type="button" class="btn big game" data-act="game" data-game="${p.game}">玩「${GAME_NAMES[p.game]}」${state.games[p.game] ? '（已完成）' : '＋5 ATP'}</button>` : ''}
+    ${p.rel?.length ? `<div class="rel"><span>順路去看</span>${p.rel.map((id) => `<button type="button" data-act="go" data-id="${id}" style="--zc:${ZMAP[PMAP[id].zone].color}">${esc(PMAP[id].name)}</button>`).join('')}</div>` : ''}`;
+}
+function openCard(p) {
+  current = p; closeDialog();
+  panel.innerHTML = cardHTML(p); panel.scrollTop = 0;
+  panel.hidden = false; requestAnimationFrame(() => panel.classList.add('open'));
+  document.body.classList.add('card-open');
+  sfx.pop();
+  if (!state.visited[p.id]) { state.visited[p.id] = 1; saveState(); gainATP(1, `第一次來到${p.name}`); }
+  refreshLabelStates();
+  try { history.replaceState(null, '', '#' + p.id); } catch (e) { /* 沙盒中可能不允許 */ }
+}
+function closeCard() {
+  if (!current && panel.hidden) return;
+  current = null; panel.classList.remove('open'); document.body.classList.remove('card-open');
+  setTimeout(() => { if (!panel.classList.contains('open')) panel.hidden = true; }, 260);
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* 忽略 */ }
+}
+panel.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'close') closeCard();
+  if (act === 'go') travelTo(PMAP[b.dataset.id]);
+  if (act === 'game') openGame(b.dataset.game);
+  if (act === 'ans') answer(current, +b.dataset.q, +b.dataset.o, b);
+});
+function answer(p, qi, oi, btn) {
+  const key = qKey(p, qi); const q = p.quiz[qi]; const blk = btn.closest('.qblk'); const fb = blk.querySelector('.fb');
+  if (state.solved[key] || btn.disabled) return;
+  if (oi === q.a) {
+    btn.classList.add('right'); blk.classList.add('solved');
+    blk.querySelectorAll('.opt').forEach((o) => { o.disabled = true; });
+    const t = tries[key] || 0; state.solved[key] = 1; saveState();
+    fb.innerHTML = `<p><b>${t === 0 ? '答對了！' : '這次對了！'}</b>${q.ex}</p>`;
+    blk.querySelector('.qh').lastElementChild.outerHTML = '<span class="okchip">已答對</span>';
+    sfx.good();
+    gainATP(t === 0 ? 3 : 1, t === 0 ? '一次答對' : '訂正成功');
+    if (poiDone(p)) { toast(`<b>集到章</b> ${esc(p.name)}`, 'stamp'); checkBadge(p.zone); }
+    updateHud();
+  } else {
+    tries[key] = (tries[key] || 0) + 1;
+    btn.classList.add('wrong'); btn.disabled = true; sfx.bad();
+    if (tries[key] >= 2) {
+      blk.querySelector(`.opt[data-o="${q.a}"]`).classList.add('hint');
+      fb.innerHTML = `<p><b>正確答案是 ${'ABCD'[qOrder(key, q.o.length).indexOf(q.a)]}。</b>${q.ex}<br><small>點正確答案，這一題就算完成。</small></p>`;
+    } else fb.innerHTML = '<p><b>再想想看！</b>重新讀一下上面的重點。</p>';
+  }
+}
+function checkBadge(zid) {
+  if (state.badges[zid] || !zoneDone(zid)) return;
+  state.badges[zid] = 1; saveState(); updateHud();
+  const all = ZONES.every((z) => state.badges[z.id]);
+  setTimeout(() => {
+    showDialog({ name: NMAP.guide.name, sub: NMAP.guide.role, color: NMAP.guide.color,
+      lines: [`太厲害了！${ZMAP[zid].code}「${ZMAP[zid].name}」的題目全部答對，送你「${BADGE[zid]}」徽章 ${BADGE_ICON[zid]}`, all ? `${ZONES.length} 枚徽章都到齊了！你就是${ISLAND.name}的榮譽島民！` : `還差 ${ZONES.filter((z) => !state.badges[z.id]).length} 枚徽章，加油！`],
+      actions: all ? [{ label: '領取榮譽島民證', fn: openCert }] : [{ label: '看護照', fn: openPassport }] });
+    sfx.good();
+  }, 900);
+}
+
+// ---------- 對話框 ----------
+let dlg = null;
+function showDialog({ name, sub, color, lines, actions = [] }) {
+  const el = $('#dialog'); dlg = { lines, i: 0, actions, timer: null, full: false };
+  el.hidden = false; el.style.setProperty('--nc', color || '#f2a541');
+  $('#dlgName').innerHTML = `${esc(name)}${sub ? `<small>${esc(sub)}</small>` : ''}`;
+  typeLine();
+}
+function typeLine() {
+  const txt = dlg.lines[dlg.i]; const box = $('#dlgText');
+  $('#dlgActions').innerHTML = ''; clearInterval(dlg.timer); dlg.full = false; $('#dialog').classList.remove('last');
+  if (REDUCED) { box.textContent = txt; finishLine(); return; }
+  let n = 0; box.textContent = '';
+  dlg.timer = setInterval(() => { n += 1; box.textContent = txt.slice(0, n); if (n % 2 === 0 && txt[n - 1] !== ' ') sfx.blip(); if (n >= txt.length) { clearInterval(dlg.timer); finishLine(); } }, 26);
+}
+function advanceDialog() {
+  if (!dlg) return;
+  if (!dlg.full) { clearInterval(dlg.timer); $('#dlgText').textContent = dlg.lines[dlg.i]; finishLine(); return; }
+  if (dlg.i < dlg.lines.length - 1) { dlg.i++; typeLine(); } else if (!dlg.actions.length) closeDialog();
+}
+function finishLine() {
+  const last = dlg.i >= dlg.lines.length - 1; dlg.full = true;
+  $('#dialog').classList.toggle('last', last);
+  $('#dlgActions').innerHTML = last ? dlg.actions.map((a, k) => `<button type="button" class="btn" data-k="${k}">${esc(a.label)}</button>`).join('') + '<button type="button" class="btn ghost" data-k="close">好！</button>' : '';
+}
+function closeDialog() { if (!dlg) return; clearInterval(dlg.timer); dlg = null; $('#dialog').hidden = true; }
+$('#dialog').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-k]');
+  if (b) { const k = b.dataset.k; const a = dlg?.actions[+k]; closeDialog(); if (a) a.fn(); return; }
+  advanceDialog();
+});
+
+// ---------- 視窗（地圖、搜尋、護照、小遊戲、證書） ----------
+const modal = $('#modal');
+const modalOpen = () => !modal.hidden;
+let modalCleanup = null;
+function openModal(html, cls = '') {
+  if (modalCleanup) { modalCleanup(); modalCleanup = null; }
+  $('#modalBody').innerHTML = html; modal.className = 'modal ' + cls; modal.hidden = false;
+  requestAnimationFrame(() => modal.classList.add('open'));
+  setTimeout(() => { const f = modal.querySelector('[autofocus]') || $('#modalClose'); f.focus({ preventScroll: true }); }, 30);
+}
+function closeModal() { if (modal.hidden) return; if (modalCleanup) { modalCleanup(); modalCleanup = null; } modal.classList.remove('open'); modal.hidden = true; }
+$('#modalClose').addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+let mapURL = null;
+function mapImage() {
+  if (mapURL) return mapURL;
+  const W = 320, H = 300, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); const img = x.createImageData(W, H);
+  const sea = new THREE.Color('#4cc6da'), col = new THREE.Color();
+  for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
+    const wx = -76 + px / W * 152, wz = -70 + py / H * 142; const h = terrainH(wx, wz);
+    terrainColor(wx, wz, h, slopeAt(wx, wz), col); if (h < 0) col.lerp(sea, 0.62);
+    if (h > 0.6 && slopeAt(wx, wz) < 0.75) { const sh = (terrainH(wx - 0.6, wz - 0.6) - h) * 0.6; col.offsetHSL(0, 0, -clamp(sh, -0.08, 0.12)); }
+    const i = (py * W + px) * 4; const s = col.clone().convertLinearToSRGB(); img.data[i] = s.r * 255; img.data[i + 1] = s.g * 255; img.data[i + 2] = s.b * 255; img.data[i + 3] = 255;
+  }
+  x.putImageData(img, 0, 0);
+  mapURL = c.toDataURL(); return mapURL;
+}
+const mapPos = (wx, wz) => [((wx + 76) / 152 * 100).toFixed(2), ((wz + 70) / 142 * 100).toFixed(2)];
+function openMap() {
+  closeDialog();
+  const dots = POIS.map((p) => { const [l, t] = mapPos(p.p[0], p.p[1]); return `<button type="button" class="mdot${poiDone(p) ? ' done' : ''}" style="left:${l}%;top:${t}%;--zc:${ZMAP[p.zone].color}" data-id="${p.id}" title="${esc(p.name)}" aria-label="${esc(p.name)}"></button>`; }).join('');
+  const [pl, pt] = mapPos(P.x, P.z);
+  const zones = ZONES.map((z) => `<div class="mz" style="--zc:${z.color}"><h3><b>${z.code}</b>${esc(z.name)}<small>${esc(z.sub)}</small></h3><div class="mz-list">${POIS.filter((p) => p.zone === z.id).map((p) => `<button type="button" data-id="${p.id}" class="${poiDone(p) ? 'done' : state.visited[p.id] ? 'seen' : ''}">${esc(p.name)}</button>`).join('')}</div></div>`).join('');
+  openModal(`<h2 class="mt">${esc(ISLAND.name)}地圖</h2><p class="sub">點地圖上的圓點或下面的名稱，直接傳送過去。★ 表示題目已全部答對。</p>
+    <div class="mapwrap"><div class="map"><img src="${mapImage()}" alt="${esc(ISLAND.name)}俯視地圖">${dots}<span class="me" style="left:${pl}%;top:${pt}%" aria-label="你在這裡"></span>
+    ${ZONES.map((z) => { const [l, t] = mapPos(z.center[0], z.center[1]); return `<span class="mzl" style="left:${l}%;top:${t}%;--zc:${z.color}">${z.code}</span>`; }).join('')}</div>
+    <div class="mzs">${zones}</div></div>`, 'wide');
+  $('#modalBody').addEventListener('click', (e) => { const b = e.target.closest('[data-id]'); if (b) travelTo(PMAP[b.dataset.id]); });
+}
+
+function openSearch() {
+  closeDialog();
+  const sugg = ['消化', '酵素', '光合作用', '木質部', '韌皮部', '心臟', '微血管', '淋巴', '疫苗', '碘液'];
+  openModal(`<h2 class="mt">搜尋${esc(ISLAND.name)}</h2><label class="sr" for="q">輸入關鍵字</label>
+    <input id="q" type="search" placeholder="例如：粒線體、ATP、減數分裂" autocomplete="off" autofocus>
+    <div class="sugg">${sugg.map((s) => `<button type="button" data-s="${s}">${s}</button>`).join('')}</div>
+    <ul class="results" id="results" aria-live="polite"></ul>`);
+  const q = $('#q'), res = $('#results');
+  const run = () => {
+    const v = q.value.trim().toLowerCase(); if (!v) { res.innerHTML = ''; return; }
+    const scored = POIS.map((p) => {
+      const body = strip([p.place, ...p.pts, p.tip || '', ...(p.flow || []), ...p.quiz.map((x) => x.q + x.o.join(''))].join(' ')).toLowerCase();
+      let s = 0; if (p.name.toLowerCase().includes(v)) s += 5; if (p.kw.toLowerCase().includes(v)) s += 3; if (body.includes(v)) s += 1;
+      let snip = ''; if (s) { const pt = p.pts.map(strip).find((t) => t.toLowerCase().includes(v)) || strip(p.place); snip = pt.length > 64 ? pt.slice(0, 62) + '…' : pt; }
+      return { p, s, snip };
+    }).filter((r) => r.s > 0).sort((a, b) => b.s - a.s).slice(0, 10);
+    res.innerHTML = scored.length ? scored.map(({ p, snip }) => `<li><button type="button" data-id="${p.id}" style="--zc:${ZMAP[p.zone].color}"><span class="rz">${ZMAP[p.zone].code}</span><b>${esc(p.name)}</b><small>${esc(snip)}</small></button></li>`).join('') : `<li class="none">找不到「${esc(q.value)}」，換個詞試試，例如「細胞核」。</li>`;
+  };
+  q.addEventListener('input', run);
+  q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const f = res.querySelector('[data-id]'); if (f) travelTo(PMAP[f.dataset.id]); } });
+  $('#modalBody').addEventListener('click', (e) => { const s = e.target.closest('[data-s]'); if (s) { q.value = s.dataset.s; run(); q.focus(); return; } const b = e.target.closest('[data-id]'); if (b) travelTo(PMAP[b.dataset.id]); });
+}
+
+function badgesHTML() { return `<div class="badges">${ZONES.map((z) => `<div class="badge${state.badges[z.id] ? ' on' : ''}" style="--zc:${z.color}"><span>${BADGE_ICON[z.id]}</span><b>${esc(BADGE[z.id])}</b><small>${z.code} ${esc(z.name)}</small></div>`).join('')}</div>`; }
+function openPassport() {
+  closeDialog();
+  const all = ZONES.every((z) => state.badges[z.id]);
+  const zones = ZONES.map((z) => {
+    const list = POIS.filter((p) => p.zone === z.id); const d = list.filter(poiDone).length;
+    return `<div class="pz" style="--zc:${z.color}"><h3><b>${z.code}</b>${esc(z.name)}<span>${d}／${list.length}</span></h3><div class="stamps">${list.map((p) => `<button type="button" data-id="${p.id}" class="stamp ${poiDone(p) ? 'done' : state.visited[p.id] ? 'seen' : ''}"><i aria-hidden="true">${poiDone(p) ? '★' : state.visited[p.id] ? '○' : '·'}</i>${esc(p.name)}</button>`).join('')}</div></div>`;
+  }).join('');
+  openModal(`<h2 class="mt">${esc(ISLAND.name)}護照</h2>
+    <p class="sub">完成 <b>${doneCount()} / ${POIS.length}</b> 站・ATP <b>${state.atp}</b>・徽章 <b>${ZONES.filter((z) => state.badges[z.id]).length} / ${ZONES.length}</b></p>
+    ${badgesHTML()}
+    <div class="games"><span>小遊戲</span>${Object.entries(GAME_NAMES).map(([k, v]) => `<button type="button" class="${state.games[k] ? 'done' : ''}" data-game="${k}">${state.games[k] ? '✓ ' : ''}${v}</button>`).join('')}</div>
+    ${zones}
+    <div class="prow"><button type="button" class="btn big" data-act="cert" ${all ? '' : 'disabled'}>${all ? '領取榮譽島民證' : `集滿 ${ZONES.length} 枚徽章就能領島民證`}</button><button type="button" class="linkbtn" data-act="reset">重設進度</button></div>`, 'wide');
+  let armed = false;
+  $('#modalBody').addEventListener('click', (e) => {
+    const g = e.target.closest('[data-game]'); if (g) { openGame(g.dataset.game); return; }
+    const b = e.target.closest('[data-id]'); if (b) { travelTo(PMAP[b.dataset.id]); return; }
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    if (a.dataset.act === 'cert') openCert();
+    if (a.dataset.act === 'reset') {
+      if (!armed) { armed = true; a.textContent = '確定清空所有進度？再按一次'; a.classList.add('armed'); setTimeout(() => { armed = false; a.textContent = '重設進度'; a.classList.remove('armed'); }, 3500); return; }
+      state = { ...state, atp: 0, visited: {}, solved: {}, games: {}, badges: {} }; saveState(); updateHud(); closeModal(); toast('進度已重設');
+    }
+  });
+}
+function openCert() {
+  const d = new Date(); const date = `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+  openModal(`<div class="cert">
+    <div class="cert-k">${esc(ISLAND.name)}</div><h2>榮譽島民證</h2>
+    <label class="sr" for="certName">你的名字</label><input id="certName" maxlength="16" placeholder="在這裡寫上你的名字" value="${esc(state.name)}" autocomplete="off">
+    <p>完成${esc(ISLAND.course)}全部 ${POIS.length} 站，收集到 ${ZONES.length} 枚徽章。</p>
+    ${badgesHTML()}
+    <div class="cert-foot"><span>ATP <b>${state.atp}</b></span><span>${date}</span></div>
+  </div><p class="sub center">可以截圖保存，或拿給老師看。</p>`, 'cert-modal');
+  const n = $('#certName'); n.addEventListener('input', () => { state.name = n.value; saveState(); });
+}
+
+// ---------- 小遊戲 ----------
+function openGame(k) { closeDialog(); const g = GAMES[k]; (g.type === 'order' ? orderGame : matchGame)(k, g); }
+function shuffled(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } if (a.every((v, i) => v === arr[i])) a.reverse(); return a; }
+function finishGame(k, g) { if (!state.games[k]) { state.games[k] = 1; saveState(); gainATP(g.reward, g.name); } }
+function orderGame(k, g, r = 0) {
+  const round = g.rounds[r]; const items = round.items; const order = shuffled(items.map((_, i) => i)); let picked = [];
+  openModal(`<h2 class="mt">${esc(g.name)}${g.rounds.length > 1 ? ` <small>第 ${r + 1}／${g.rounds.length} 回</small>` : ''}</h2>
+    <p class="sub">${esc(round.title)}：從<b>第一個</b>開始，依序點下去。</p>
+    <div class="ocards">${order.map((i) => `<button type="button" class="ocard" data-i="${i}"><span class="num"></span>${esc(items[i])}</button>`).join('')}</div>
+    <ol class="otrack" aria-label="你排的順序"></ol>
+    <div class="gact"><button type="button" class="btn ghost" data-g="reset">重排</button></div><div class="gfb" aria-live="polite"></div>`, 'wide');
+  const body = $('#modalBody');
+  const render = () => {
+    body.querySelectorAll('.ocard').forEach((c) => { const n = picked.indexOf(+c.dataset.i); c.classList.toggle('on', n >= 0); c.querySelector('.num').textContent = n >= 0 ? n + 1 : ''; });
+    body.querySelector('.otrack').innerHTML = picked.map((i) => `<li>${esc(items[i])}</li>`).join('');
+  };
+  body.addEventListener('click', (e) => {
+    if (e.target.closest('[data-g="reset"]')) { picked = []; body.querySelectorAll('.ocard').forEach((c) => c.classList.remove('right', 'wrong')); body.querySelector('.gfb').innerHTML = ''; render(); return; }
+    if (e.target.closest('[data-g="next"]')) { orderGame(k, g, r + 1); return; }
+    const c = e.target.closest('.ocard'); if (!c || picked.length >= items.length) return;
+    const i = +c.dataset.i; if (picked.includes(i)) return; picked.push(i); sfx.blip(); render();
+    if (picked.length === items.length) {
+      const ok = picked.every((v, n) => v === n);
+      body.querySelectorAll('.ocard').forEach((el) => { const i2 = +el.dataset.i; el.classList.add(picked.indexOf(i2) === i2 ? 'right' : 'wrong'); });
+      const fb = body.querySelector('.gfb');
+      if (ok) {
+        sfx.good(); const last = r === g.rounds.length - 1;
+        fb.innerHTML = `<p><b>完全正確！</b>${esc(round.done)}</p>${last ? '' : '<div class="gact"><button type="button" class="btn big" data-g="next">下一回</button></div>'}`;
+        if (last) finishGame(k, g);
+      } else { sfx.bad(); fb.innerHTML = '<p><b>順序還不對。</b>紅框的位置放錯了，按「重排」再試一次。</p>'; }
+    }
+  });
+}
+function matchGame(k, g) {
+  const right = shuffled(g.pairs.map((_, i) => i)); let sel = null; const done = new Set();
+  openModal(`<h2 class="mt">${esc(g.name)}</h2><p class="sub">先點左邊，再點右邊和它配成一對。</p>
+    <div class="mgrid"><div class="mcol">${g.pairs.map((p, i) => `<button type="button" class="mitem" data-l="${i}">${esc(p[0])}</button>`).join('')}</div>
+    <div class="mcol">${right.map((i) => `<button type="button" class="mitem r" data-r="${i}">${esc(g.pairs[i][1])}</button>`).join('')}</div></div>
+    <div class="gfb" aria-live="polite"></div>`, 'wide');
+  const body = $('#modalBody');
+  body.addEventListener('click', (e) => {
+    const l = e.target.closest('[data-l]'), r2 = e.target.closest('[data-r]');
+    if (l && !done.has(+l.dataset.l)) { body.querySelectorAll('[data-l]').forEach((x) => x.classList.remove('on')); l.classList.add('on'); sel = +l.dataset.l; sfx.blip(); return; }
+    if (r2 && sel !== null && !done.has(+r2.dataset.r)) {
+      const L = body.querySelector(`[data-l="${sel}"]`);
+      if (+r2.dataset.r === sel) { done.add(sel); L.classList.remove('on'); L.classList.add('right'); r2.classList.add('right'); L.disabled = r2.disabled = true; sel = null; sfx.good();
+        if (done.size === g.pairs.length) { body.querySelector('.gfb').innerHTML = '<p><b>全部配對成功！</b>記得：膽汁不含酵素，胰液三種養分都能分解。</p>'; finishGame(k, g); } }
+      else { sfx.bad(); r2.classList.add('wrong'); setTimeout(() => r2.classList.remove('wrong'), 450); }
+    }
+  });
+}
+
+// ---------- 介面綁定 ----------
+function setupUI() {
+  buildLabels(); updateHud();
+  $('#btnMap').addEventListener('click', openMap);
+  $('#btnSearch').addEventListener('click', openSearch);
+  $('#btnPass').addEventListener('click', openPassport);
+  $('#btnView').addEventListener('click', () => { if (cam.mode === 'follow') { setMode('overview'); cam.ov = overviewDist(); } else setMode('follow'); });
+  const snd = $('#btnSound');
+  const syncSnd = () => { snd.setAttribute('aria-pressed', String(state.sound)); snd.querySelector('.t').textContent = state.sound ? '音效 開' : '音效 關'; };
+  syncSnd(); snd.addEventListener('click', () => { state.sound = !state.sound; saveState(); syncSnd(); if (state.sound) sfx.pop(); });
+  $('#hintClose').addEventListener('click', () => $('#hint').classList.add('fade'));
+  $('#btnStart').addEventListener('click', () => startPlay(false));
+  $('#btnStartMap').addEventListener('click', () => startPlay(true));
+  addEventListener('hashchange', () => { const id = location.hash.slice(1); if (PMAP[id] && current?.id !== id) { if (!$('#intro').hidden) hideIntro(); travelTo(PMAP[id]); } });
+}
+function overviewDist() { const a = cv.clientWidth / Math.max(1, cv.clientHeight); return clamp(215 / Math.min(1, a * 1.2), 215, 390); }
+function hideIntro() { const i = $('#intro'); i.classList.add('gone'); setTimeout(() => { i.hidden = true; }, 500); }
+function startPlay(withMap) {
+  audio(); hideIntro(); setMode('follow'); cam.yaw = 0.0;
+  if (withMap) { setTimeout(openMap, 600); return; }
+  setTimeout(() => {
+    const g = NMAP.guide;
+    if (!state.seenGuide) { state.seenGuide = true; saveState(); talkTo(g); }
+    else showDialog({ name: g.name, sub: g.role, color: g.color, lines: [`歡迎回來！你已經完成 ${doneCount()} / ${POIS.length} 站，存了 ${state.atp} ATP。想去哪裡都可以打開地圖喔。`], actions: [{ label: '打開島嶼地圖', fn: openMap }] });
+  }, REDUCED ? 100 : 1100);
+}
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+  if (cam.mode !== 'follow') cam.ov = overviewDist();
+}
+addEventListener('resize', resize);
+
+// ---------- 主迴圈與啟動 ----------
+let lastT = performance.now(), T = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, Math.max(0, (now - lastT) / 1000)); lastT = now;
+  if (document.hidden) return;
+  T += dt;
+  updatePlayer(dt); updateNPCs(dt, T); updateCamera(dt);
+  for (const a of animators) a(T, dt);
+  updateFx(dt);
+  renderer.render(scene, camera);
+  updateLabels(); updateZone(dt);
+}
+const SIGN_TEXT = POIS.map((p) => p.name).join('') + NPCS.map((n) => n.name).join('') + '―₂℃←↑→↓　、・一上下中乙乳事代作來光冬出分到剩加動化匙半南口右合向吸咽唾囊型增夏夜天孔學定室宿實專小屋展層島工左巴廠形微心快性成房所抗排撲收故散日春晚最有木材束根構模樹歡毛氣水汁沒沸液淋深淺測漿照片牛狀玉球環瓜生用甲疫痘白的皮研碘示秋科稻積究站第管米精素細終組絨維織肉肛肝胃胞胰脂脈腔腸膚膜膽臟舍色花苗葉葵蛋血表角解謝質迎透通造進道遞遮遺部酒酵酸醣鑰長門開關靜面韌類食養餘館驗體鹼鹽黏點（）＋／：｜0123456789';
+async function init(data) {
+  loadState();
+  try { await Promise.race([document.fonts.load(`40px Huninn`, SIGN_TEXT), new Promise((r) => setTimeout(r, 3000))]); } catch (e) { /* 字型載入失敗就用系統字 */ }
+  buildTerrain(); buildWater(); buildStructures(); buildPOIs(); buildDecor(); buildObstGrid();
+  setupUI(); resize();
+  if (window.claude?.hot?.snapshot) window.claude.hot.snapshot(() => ({ px: P.x, pz: P.z, mode: cam.mode, yaw: cam.yaw, card: current?.id || null }));
+  const hashId = location.hash.slice(1);
+  if (data && typeof data.px === 'number') {
+    $('#intro').hidden = true; P.x = data.px; P.z = data.pz; cam.yaw = data.yaw || 0; setMode(data.mode === 'overview' ? 'overview' : 'follow');
+    if (data.card && PMAP[data.card]) openCard(PMAP[data.card]);
+  } else if (PMAP[hashId]) { $('#intro').hidden = true; setMode('follow'); travelTo(PMAP[hashId]); }
+  else { cam.ov = overviewDist(); document.body.dataset.mode = 'intro'; }
+  player.position.y = groundH(P.x, P.z);
+  cam.ctx = cam.mode === 'follow' ? P.x : -3; cam.ctz = cam.mode === 'follow' ? P.z : 1;
+  $('#loading').classList.add('gone'); setTimeout(() => { $('#loading').hidden = true; }, 600);
+  requestAnimationFrame(loop);
+}
+const boot = (data) => { init(data || {}).catch((e) => { console.error(e); $('#loading').textContent = '島嶼載入失敗，請重新整理頁面。'; }); };
+if (window.claude?.hot?.ready) window.claude.hot.ready(boot); else boot(window.claude?.hot?.data ?? {});
+
+</script>
+</body>
+</html>
